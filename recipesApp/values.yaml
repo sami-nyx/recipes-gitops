@@ -20,9 +20,6 @@ recipesApi:
   port: 5000
   
   # Application Secrets
-  secrets:
-    secretKey: "dev-secret-key-change-in-production-12345"
-    jwtSecretKey: "dev-jwt-secret-key-must-be-at-least-32-bytes-long"
 
   # Container Resources
   resources:
