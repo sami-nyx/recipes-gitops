@@ -1,0 +1,34 @@
+postgres:
+  enabled: true
+  instances: 2
+  clusterName: "recipes-db"  # Matches your CNPG cluster name
+  storage:
+    size: 5Gi
+    storageClass: ""
+  databaseName: "recipes_db"
+  databaseUser: "recipes_app"
+
+recipesApi:
+  replicas: 1
+  name: recipes-api
+  namespace: default
+  flaskEnv: production
+  dbPort: 5432
+  imagePullPolicy: IfNotPresent
+  imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
+  imageTag: latest
+  port: 5000
+  
+  # Application Secrets
+  secrets:
+    secretKey: "dev-secret-key-change-in-production-12345"
+    jwtSecretKey: "dev-jwt-secret-key-must-be-at-least-32-bytes-long"
+
+  # Container Resources
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

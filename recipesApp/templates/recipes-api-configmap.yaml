@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.recipesApi.name }}-config
+  namespace: {{ .Values.recipesApi.namespace }}
+  labels:
+    app: {{ .Values.recipesApi.name }}
+data:
+  FLASK_ENV: {{ .Values.recipesApi.flaskEnv | quote }}
+  DB_HOST: {{ default (printf "%s-postgres-rw" .Release.Name) .Values.recipesApi.dbHost | quote }}
+  DB_PORT: {{ .Values.recipesApi.dbPort | quote }}
