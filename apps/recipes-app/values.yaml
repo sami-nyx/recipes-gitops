@@ -19,7 +19,6 @@ recipesApi:
   imageTag: latest
   port: 5000
   
-  # Application Secrets
 
   # Container Resources
   resources:
