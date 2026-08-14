@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: recipes-api
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/recipes-gitops.git
+    targetRevision: main
+    path: apps/recipes-api
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: recipes
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

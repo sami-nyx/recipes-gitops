@@ -1,0 +1,32 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: argocd-github-repository
+  namespace: argocd
+
+spec:
+  refreshInterval: 1h
+
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+
+  target:
+    name: argocd-github-repository
+    creationPolicy: Owner
+
+    template:
+      metadata:
+        labels:
+          argocd.argoproj.io/secret-type: repository
+
+  data:
+    - secretKey: username
+      remoteRef:
+        key: recipes-gitops-pat
+        property: username
+
+    - secretKey: password
+      remoteRef:
+        key: recipes-gitops-pat
+        property: password
