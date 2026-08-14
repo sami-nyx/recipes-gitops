@@ -41,7 +41,7 @@ spec:
         # 1. Bulk-load ConfigMap & Application Secrets
         envFrom:
         - configMapRef:
-            name: {{ .Values.recipesApi.name }}-configmap
+            name: {{ .Values.recipesApi.name }}-config
         - secretRef:
             name: recipes-api-secret
             # name: {{ .Values.recipesApi.name }}-secret
