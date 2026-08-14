@@ -1,8 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.recipesApi.name }}
-  namespace: {{ .Values.recipesApi.namespace }}
+   name: {{ .Values.recipesApi.name }}
   labels:
     app: {{ .Values.recipesApi.name }}
 spec:

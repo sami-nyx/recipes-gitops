@@ -1,8 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.recipesApi.name }}-config
-  namespace: {{ .Values.recipesApi.namespace }}
+  name: {{ .Values.recipesApi.name }}
   labels:
     app: {{ .Values.recipesApi.name }}
 data:
