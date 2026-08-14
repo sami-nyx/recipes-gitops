@@ -3,45 +3,24 @@ kind: Ingress
 metadata:
   name: {{ .Values.recipesApi.name }}
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
+
 spec:
-  ingressClassName: "nginx"
+  ingressClassName: {{ .Values.ingress.className | quote }}
+
   tls:
-  - hosts:
-    - www.weaversls.com
-    secretName: web-app-tls-secret # cert-manager automatically creates and manages this secret
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+
   rules:
-  - host: www.weaversls.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: web-app-svc
-            port:
-              number: 80
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: portfolio-ingress
-  namespace: default
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  ingressClassName: "nginx"
-  tls:
-  - hosts:
-    - www.weaversls.com        # Replace with your actual domain/subdomain
-    secretName: portfolio-tls-secret  # cert-manager will create this secret automatically
-  rules:
-  - host: www.weaversls.com      # Replace with your actual domain/subdomain
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: web-app-svc # Replace with your app's service name
-            port:
-              number: 80
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.recipesApi.name }}
+                port:
+                  number: {{ .Values.recipesApi.servicePort }}

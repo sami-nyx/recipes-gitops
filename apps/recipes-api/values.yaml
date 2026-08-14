@@ -18,8 +18,17 @@ recipesApi:
   imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
   imageTag: latest
   port: 5000
+  servicePort: 80
   
+ingress:
+  enabled: true
+  className: nginx
+  host: www.weaversls.com
+  path: /api
+  clusterIssuer: letsencrypt-prod
 
+  tls:
+    secretName: recipes-api-tls
   # Container Resources
   resources:
     requests:
