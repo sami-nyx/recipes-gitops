@@ -24,7 +24,7 @@ ingress:
   enabled: true
   className: nginx
   host: www.weaversls.com
-  path: /api
+  path: /
   clusterIssuer: letsencrypt-prod
 
   tls:
