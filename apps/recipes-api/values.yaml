@@ -1,13 +1,12 @@
 postgres:
   enabled: true
   instances: 2
-  clusterName: "recipes-db"  # Matches your CNPG cluster name
+  clusterName: "recipes-db" # Matches your CNPG cluster name
   storage:
     size: 5Gi
     storageClass: ""
   databaseName: "recipes_db"
   databaseUser: "recipes_app"
-
 recipesApi:
   replicas: 1
   name: recipes-api
@@ -16,17 +15,15 @@ recipesApi:
   dbPort: 5432
   imagePullPolicy: IfNotPresent
   imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
-  imageTag: latest
+  imageTag: v1.0.16
   port: 5000
   servicePort: 80
-  
 ingress:
   enabled: true
   className: nginx
   host: www.weaversls.com
   path: /
   clusterIssuer: letsencrypt-prod
-
   tls:
     secretName: recipes-api-tls
   # Container Resources
