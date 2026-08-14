@@ -9,7 +9,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/YOUR_USERNAME/recipes-gitops.git
+    repoURL: https://github.com/samy-nyx/recipes-gitops.git
     targetRevision: main
     path: apps/recipes-api
 
