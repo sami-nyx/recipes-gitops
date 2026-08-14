@@ -1,10 +1,12 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: recipes-api-postgres
-  labels:
-    app.kubernetes.io/name: recipes-api-postgres
-    app.kubernetes.io/instance: recipes-api
+    name: recipes-api-postgres
+    labels:
+        app.kubernetes.io/name: recipes-api-postgres
+        app.kubernetes.io/instance: recipes-api
+    annotations:
+        argocd.argoproj.io/sync-wave: "-2"
 
 spec:
   instances: 1
