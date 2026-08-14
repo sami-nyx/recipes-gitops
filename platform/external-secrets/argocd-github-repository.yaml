@@ -14,11 +14,20 @@ spec:
   target:
     name: argocd-github-repository
     creationPolicy: Owner
+    deletionPolicy: Retain
 
     template:
+      engineVersion: v2
+
       metadata:
         labels:
           argocd.argoproj.io/secret-type: repository
+
+      data:
+        type: git
+        url: https://github.com/sami-nyx/recipes-gitops.git
+        username: "{{ .username }}"
+        password: "{{ .password }}"
 
   data:
     - secretKey: username
