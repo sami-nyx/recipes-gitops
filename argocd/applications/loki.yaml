@@ -8,51 +8,26 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://grafana.github.io/helm-charts
+    repoURL: https://grafana-community.github.io/helm-charts
     chart: loki
-    targetRevision: 5.43.0
+    targetRevision: 18.9.0
     helm:
       values: |
         deploymentMode: SingleBinary
         singleBinary:
           replicas: 1
-          persistence:
-            enabled: false
-        loki:
-          auth_enabled: false
-          commonConfig:
-            replication_factor: 1
-          storage:
-            type: s3
-            s3:
-              region: ap-south-1
-              bucketNames: recipes-app-loki-logs-production
-          schema_config:
-            configs:
-              - from: 2024-04-01
-                store: tsdb
-                object_store: s3
-                schema: v13
-                index:
-                  prefix: loki_index_
-                  period: 24h
-        serviceAccount:
-          create: true
-          name: loki-service-account
-          annotations:
-            eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
-        monitoring:
-          selfMonitoring:
-            enabled: false
-            grafanaAgent:
-              installOperator: false
+        backend:
+          replicas: 0
+        read:
+          replicas: 0
+        write:
+          replicas: 0
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring
+    namespace: logging
   syncPolicy:
     automated:
       prune: true
-      selfHeal: true
+      self-heal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true 
