@@ -4,7 +4,7 @@ metadata:
   name: loki
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-2" # Core infrastructure wave
+    argocd.argoproj.io/sync-wave: "-2" 
 spec:
   project: default
   source:
@@ -30,13 +30,13 @@ spec:
           # S3 Object Storage Configuration
           storage:
             type: s3
+            bucketNames:
+              chunks: recipes-app-loki-logs-production
+              ruler: recipes-app-loki-logs-production
+              admin: recipes-app-loki-logs-production
             s3:
-              endpoint: s3.us-east-1.amazonaws.com
-              region: us-east-1
-              bucketNames:
-                chunks: recipes-app-loki-logs-production
-                ruler: recipes-app-loki-logs-production
-                admin: recipes-app-loki-logs-production
+              endpoint: s3.ap-south-1.amazonaws.com
+              region: ap-south-1
               s3ForcePathStyle: false
 
         singleBinary:
