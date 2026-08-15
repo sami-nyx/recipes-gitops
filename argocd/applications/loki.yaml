@@ -4,20 +4,20 @@ metadata:
   name: loki
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "-2" # Core infrastructure wave
 spec:
   project: default
   source:
     repoURL: https://grafana.github.io/helm-charts
     chart: loki
-    targetRevision: 5.43.0 # or latest stable version
+    targetRevision: 5.43.0
     helm:
       values: |
         deploymentMode: SingleBinary
         singleBinary:
           replicas: 1
           persistence:
-            enabled: false # We use S3 storage, no persistent volume needed for data
+            enabled: false
         loki:
           auth_enabled: false
           commonConfig:
@@ -41,6 +41,8 @@ spec:
           name: loki-service-account
           annotations:
             eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
+        grafana-agent:
+          enabled: false  # Disables the oversized Grafana Agent CRDs/resources
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
