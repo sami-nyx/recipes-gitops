@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: 5.43.0 # or latest stable version
+    helm:
+      values: |
+        deploymentMode: SingleBinary
+        singleBinary:
+          replicas: 1
+          persistence:
+            enabled: false # We use S3 storage, no persistent volume needed for data
+        loki:
+          auth_enabled: false
+          commonConfig:
+            replication_factor: 1
+          storage:
+            type: s3
+            s3:
+              region: ap-south-1
+              bucketNames: recipes-app-loki-logs-production
+          schema_config:
+            configs:
+              - from: 2024-04-01
+                store: tsdb
+                object_store: s3
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h
+        serviceAccount:
+          create: true
+          name: loki-service-account
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
