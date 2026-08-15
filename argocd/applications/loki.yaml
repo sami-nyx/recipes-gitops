@@ -14,7 +14,13 @@ spec:
     helm:
       values: |
         deploymentMode: Monolithic
-        
+
+        # Disable built-in memory caches to fit comfortably on t3a.medium nodes
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
+
         # Configure service account for AWS IRSA
         serviceAccount:
           create: true
