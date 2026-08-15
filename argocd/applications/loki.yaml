@@ -41,6 +41,10 @@ spec:
           name: loki-service-account
           annotations:
             eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
+        selfMonitoring:
+          enabled: false
+          grafanaAgent:
+            enabled: false
         grafana-agent:
           enabled: false  # Disables the oversized Grafana Agent CRDs/resources
   destination:
@@ -52,4 +56,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - ServerSideApply=true 
