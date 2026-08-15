@@ -13,7 +13,32 @@ spec:
     targetRevision: 18.9.0
     helm:
       values: |
-        deploymentMode: SingleBinary
+        deploymentMode: Monolithic
+        
+        # Configure service account for AWS IRSA
+        serviceAccount:
+          create: true
+          name: loki-service-account
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/loki-s3-role-<ENVIRONMENT>"
+
+        loki:
+          auth_enabled: false
+          commonConfig:
+            replication_factor: 1
+          
+          # S3 Object Storage Configuration
+          storage:
+            type: s3
+            s3:
+              endpoint: s3.<YOUR_AWS_REGION>.amazonaws.com
+              region: <YOUR_AWS_REGION>
+              bucketNames:
+                chunks: <YOUR_S3_BUCKET_NAME>
+                ruler: <YOUR_S3_BUCKET_NAME>
+                admin: <YOUR_S3_BUCKET_NAME>
+              s3ForcePathStyle: false
+
         singleBinary:
           replicas: 1
         backend:
