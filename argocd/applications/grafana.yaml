@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://grafana-community.github.io/helm-charts
+    chart: grafana
+    targetRevision: 8.x.x
+    helm:
+      values: |
+        # Optional: persist Grafana data if needed, or keep ephemeral for portfolio
+        persistence:
+          enabled: false
+
+        # Automatically add Loki as a default data source
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Loki
+                type: loki
+                access: proxy
+                url: http://loki.logging.svc.cluster.local:3100
+                isDefault: true
+
+        # Optional: Admin credentials (change for production)
+        admin:
+          user: admin
+          password: password123
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
