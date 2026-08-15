@@ -30,7 +30,7 @@ spec:
             [OUTPUT]
                 Name            loki
                 Match           kube.*
-                Host            loki.monitoring.svc.cluster.local
+                Host            loki.logging.svc.cluster.local
                 Port            3100
                 URI             /loki/api/v1/push
                 Auto_Kubernetes_Labels on
