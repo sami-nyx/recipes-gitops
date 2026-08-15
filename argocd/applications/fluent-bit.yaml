@@ -4,28 +4,33 @@ metadata:
   name: fluent-bit
   namespace: argocd
   argocd.argoproj.io/sync-wave: "2"
+
 spec:
   project: default
+
   source:
     repoURL: https://fluent.github.io/helm-charts
     chart: fluent-bit
-    targetRevision: 0.46.0 # or latest stable version
+    targetRevision: 0.58.0
+
     helm:
       values: |
         serviceAccount:
           create: true
           name: fluent-bit-service-account
+
         config:
           inputs: |
             [INPUT]
                 Name             tail
                 Tag              kube.*
-                Path             /var/log/pods/*/*/*.log
-                Parser           containerd
+                Path             /var/log/containers/*.log
+                Parser           cri
                 DB               /var/log/fluentbit_kube.db
                 Mem_Buf_Limit    10MB
                 Skip_Long_Lines  On
                 Refresh_Interval 10
+
           outputs: |
             [OUTPUT]
                 Name            loki
@@ -34,12 +39,15 @@ spec:
                 Port            3100
                 URI             /loki/api/v1/push
                 Auto_Kubernetes_Labels on
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+
     syncOptions:
       - CreateNamespace=true
