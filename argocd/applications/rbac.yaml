@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/sami-nyx/recipes-gitops.git
     targetRevision: main
-    path: rbac
+    path: platform/rbac
 
   destination:
     server: https://kubernetes.default.svc
