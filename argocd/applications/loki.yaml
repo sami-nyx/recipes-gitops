@@ -41,12 +41,11 @@ spec:
           name: loki-service-account
           annotations:
             eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
-        selfMonitoring:
-          enabled: false
-          grafanaAgent:
+        monitoring:
+          selfMonitoring:
             enabled: false
-        grafana-agent:
-          enabled: false  # Disables the oversized Grafana Agent CRDs/resources
+            grafanaAgent:
+              installOperator: false
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
