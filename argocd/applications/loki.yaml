@@ -20,7 +20,7 @@ spec:
           create: true
           name: loki-service-account
           annotations:
-            eks.amazonaws.com/role-arn: "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/loki-s3-role-<ENVIRONMENT>"
+            eks.amazonaws.com/role-arn: "arn:aws:iam::889867978066:role/loki-s3-role-production"
 
         loki:
           auth_enabled: false
@@ -31,12 +31,12 @@ spec:
           storage:
             type: s3
             s3:
-              endpoint: s3.<YOUR_AWS_REGION>.amazonaws.com
-              region: <YOUR_AWS_REGION>
+              endpoint: s3.us-east-1.amazonaws.com
+              region: us-east-1
               bucketNames:
-                chunks: <YOUR_S3_BUCKET_NAME>
-                ruler: <YOUR_S3_BUCKET_NAME>
-                admin: <YOUR_S3_BUCKET_NAME>
+                chunks: recipes-app-loki-logs-production
+                ruler: recipes-app-loki-logs-production
+                admin: recipes-app-loki-logs-production
               s3ForcePathStyle: false
 
         singleBinary:
