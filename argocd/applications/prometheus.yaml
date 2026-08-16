@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://grafana-community.github.io/helm-charts
-    chart: prometheus/kube-prometheus-stack 
+    chart: kube-prometheus-stack 
     targetRevision:  88.3.0  
     helm:
       values: |
