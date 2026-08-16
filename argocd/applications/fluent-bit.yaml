@@ -38,8 +38,7 @@ spec:
                 Host            loki.logging.svc.cluster.local
                 Port            3100
                 URI             /loki/api/v1/push
-                Labels           namespace=$kubernetes['namespace_name'], container=$kubernetes['container_name']
-                Auto_Kubernetes_Labels on
+                Labels           namespace=$kubernetes['namespace_name'], app=$kubernetes['labels']['app'], component=$kubernetes['container_name']
 
   destination:
     server: https://kubernetes.default.svc
