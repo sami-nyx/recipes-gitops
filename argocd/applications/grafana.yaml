@@ -26,10 +26,6 @@ spec:
                 url: http://loki.logging.svc.cluster.local:3100
                 isDefault: true
 
-        # Optional: Admin credentials (change for production)
-        admin:
-          user: admin
-          password: password123
   destination:
     server: https://kubernetes.default.svc
     namespace: logging
