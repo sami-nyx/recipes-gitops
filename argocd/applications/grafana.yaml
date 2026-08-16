@@ -14,8 +14,12 @@ spec:
         # Optional: persist Grafana data if needed, or keep ephemeral for portfolio
         persistence:
           enabled: false
-
-        # Automatically add Loki as a default data source
+        dashboards:
+          default:
+            eks-prometheus:
+              gnetId: 1860
+              revision: 45
+              datasource: Prometheus
         datasources:
           datasources.yaml:
             apiVersion: 1
