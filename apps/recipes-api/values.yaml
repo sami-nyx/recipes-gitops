@@ -33,4 +33,6 @@ ingress:
   clusterIssuer: letsencrypt-prod
   tls:
     secretName: recipes-api-tls
-  # Container Resources
+serviceMonitor:
+  enabled: true
+  interval: 15s
