@@ -1,15 +1,17 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "recipesApp.fullname" . }}-monitor
+  name: {{ include "recipes-api.fullname" . }}-monitor
   namespace: {{ .Release.Namespace }}
   labels:
     release: prometheus
     {{- include "recipes-api.labels" . | nindent 4 }}
+
 spec:
   selector:
     matchLabels:
-      {{- include "recipes-api.selectorLabels" . | nindent 6 }}
+      app: recipes-api
+
   endpoints:
     - port: http
       path: /metrics
