@@ -12,7 +12,7 @@ spec:
   source:
     repoURL: https://fred78290.github.io/cert-manager-webhook-godaddy/
     chart: godaddy-webhook
-    targetRevision: 1.29
+    targetRevision: "1.29"
 
     helm:
       releaseName: godaddy-webhook
