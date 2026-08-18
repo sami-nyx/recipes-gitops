@@ -3,6 +3,9 @@ kind: Application
 metadata:
   name: cert-manager-godaddy-webhook
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-15"
+
 spec:
   project: default
 
