@@ -13,7 +13,7 @@ spec:
 
   storage:
     size: 10Gi
-    # storageClass: gp3
+    storageClass: gp3
 
   bootstrap:
     initdb:
