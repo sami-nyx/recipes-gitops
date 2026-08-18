@@ -1,25 +1,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
-
 metadata:
-  name: cert-manager
+  name: cloudnative-pg
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
 
 spec:
   project: default
 
   source:
-    repoURL: https://github.com/sami-nyx/recipes-gitops.git
-    targetRevision: main
-    path: platform/cert-manager
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cloudnative-pg
+    targetRevision: 0.29.0
+
+    helm:
+      releaseName: cnpg-operator
 
   destination:
     server: https://kubernetes.default.svc
-    
+    namespace: cnpg-system
 
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+
     syncOptions:
       - CreateNamespace=true
