@@ -4,6 +4,9 @@ kind: Application
 metadata:
   name: recipes-postgres
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
 
 spec:
   project: default
