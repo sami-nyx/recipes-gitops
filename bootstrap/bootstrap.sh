@@ -96,5 +96,6 @@ helm upgrade --install argocd \
     argocd/argo-cd \
     --namespace argocd \
     --version "$ARGOCD_CHART_VERSION"
-
+log_info "Deploying Argo CD App Of Apps"
+kubectl apply -f ./root-app.yaml
 log_success "Bootstrap complete."
