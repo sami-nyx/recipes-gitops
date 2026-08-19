@@ -71,6 +71,11 @@ kubectl wait \
     --for=condition=established \
     --timeout=90s \
     crd/clustersecretstores.external-secrets.io
+log_info "Waiting for External Secrets webhook endpoints to be ready..."
+while [ -z "$(kubectl get endpoints external-secrets-webhook -n external-secrets -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)" ]; do
+    echo "Waiting for webhook endpoints..."
+    sleep 2
+done
 
 log_success "External Secrets Operator is ready."
 
@@ -96,6 +101,9 @@ helm upgrade --install argocd \
     argocd/argo-cd \
     --namespace argocd \
     --version "$ARGOCD_CHART_VERSION"
+
 log_info "Deploying Argo CD App Of Apps"
+
 kubectl apply -f ./root-app.yaml
+
 log_success "Bootstrap complete."
