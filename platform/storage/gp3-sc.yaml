@@ -10,4 +10,4 @@ parameters:
   fsType: ext4
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
-reclaimPolicy: Delete
+reclaimPolicy: Delete 

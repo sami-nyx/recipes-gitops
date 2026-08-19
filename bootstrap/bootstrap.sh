@@ -4,8 +4,8 @@ set -euo pipefail
 # ==============================================================================
 # CONFIGURATION & PATHS
 # ==============================================================================
-TF_DIR="/home/sami/projects/recipes-infra/eks-platform-terraform"
-GITOPS_REPO_URL="https://github.com/sami-nyx/recipes-gitops.git"
+# TF_DIR="/home/sami/projects/recipes-infra/eks-platform-terraform"
+# GITOPS_REPO_URL="https://github.com/sami-nyx/recipes-gitops.git"====================================================><><><><><><><><><><><><><>
 
 # Chart Versions
 ESO_VERSION=" 2.9.0 "          
@@ -56,13 +56,12 @@ log_success "All required CLI tools are present."
 # ==============================================================================
 # TERRAFORM OUTPUT EXTRACTION
 # ==============================================================================
-log_info "Fetching outputs from Terraform state..."
-TF_OUTPUTS=$(terraform -chdir="$TF_DIR" output -json) || log_error "Failed to run terraform output."
+# log_info "Fetching outputs from Terraform state..."
+# TF_OUTPUTS=$(terraform -chdir="$TF_DIR" output -json) || log_error "Failed to run terraform output."
 
-export GITOPS_REPO_URL
-export CLUSTER_REGION=$(echo "$TF_OUTPUTS" | jq -r ".cluster_region.value // empty")
-export CLUSTER_NAME=$(echo "$TF_OUTPUTS" | jq -r ".cluster_name.value // empty")
-export EXTERNAL_SECRETS_ROLE_ARN=$(echo "$TF_OUTPUTS" | jq -r ".external_secrets_role_arn.value // empty")
+# export CLUSTER_REGION=$(echo "$TF_OUTPUTS" | jq -r ".cluster_region.value // empty")
+# export CLUSTER_NAME=$(echo "$TF_OUTPUTS" | jq -r ".cluster_name.value // empty")
+# export EXTERNAL_SECRETS_ROLE_ARN=$(echo "$TF_OUTPUTS" | jq -r ".external_secrets_role_arn.value // empty")
 
 if [[ -z "$CLUSTER_REGION" || -z "$CLUSTER_NAME" || -z "$EXTERNAL_SECRETS_ROLE_ARN" ]]; then
     log_error "One or more required Terraform outputs are missing or empty."
@@ -100,7 +99,6 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 
 log_info "Waiting for External Secrets CRDs to be established..."
 kubectl wait --for=condition=established --timeout=90s crd/clustersecretstores.external-secrets.io
-sleep 5 # Buffer for API server discovery cache sync
 log_success "External Secrets Operator is ready."
 
 # ==============================================================================
