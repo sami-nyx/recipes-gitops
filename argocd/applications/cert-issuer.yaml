@@ -4,7 +4,8 @@ kind: Application
 metadata:
   name: cert-issuer
   namespace: argocd
-
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
 
