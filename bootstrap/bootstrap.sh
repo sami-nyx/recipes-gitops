@@ -46,6 +46,7 @@ aws eks update-kubeconfig \
     --region "$CLUSTER_REGION" \
     --name "$CLUSTER_NAME"
 
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 log_success "Kubeconfig updated."
 
 log_info "Configuring Helm repositories..."
@@ -103,7 +104,6 @@ helm upgrade --install argocd \
     --version "$ARGOCD_CHART_VERSION"
 
 log_info "Deploying Argo CD App Of Apps"
-
 kubectl apply -f ./root-app.yaml
 
 log_success "Bootstrap complete."
