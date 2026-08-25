@@ -1,38 +1,88 @@
 postgres:
   enabled: true
   instances: 2
-  clusterName: "recipes-db" # Matches your CNPG cluster name
+
+  clusterName: "recipes-db"
+
   storage:
     size: 5Gi
     storageClass: ""
+
   databaseName: "recipes_db"
   databaseUser: "recipes_app"
+
+
 recipesApi:
   replicas: 1
+
   name: recipes-api
   namespace: default
+
+  # ============================================================
+  # Application
+  # ============================================================
+
   flaskEnv: production
-  dbPort: 5432
-  imagePullPolicy: IfNotPresent
-  imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
-  imageTag: v1.0.29
+
   port: 5000
-  servicePort: 80
+
+  appVersion: "v1.0.29"
+
+  corsOrigin: "https://www.weaversls.com"
+
+
+  # ============================================================
+  # Database
+  # ============================================================
+
+  dbScheme: "postgresql+psycopg2"
+
+  dbHost: "recipes-api-postgres-rw"
+
+  dbPort: 5432
+
+
+  # ============================================================
+  # Container
+  # ============================================================
+
+  imagePullPolicy: IfNotPresent
+
+  imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
+
+  imageTag: v1.0.29
+
+
+  # ============================================================
+  # Resources
+  # ============================================================
+
   resources:
     requests:
       cpu: "250m"
       memory: "256Mi"
+
     limits:
       cpu: "500m"
       memory: "512Mi"
+
+
 ingress:
   enabled: true
+
   className: nginx
+
   host: www.weaversls.com
+
   path: /
+
   clusterIssuer: letsencrypt-prod
+
   tls:
     secretName: recipes-api-tls
+
+
 serviceMonitor:
   enabled: true
+
   interval: 15s
