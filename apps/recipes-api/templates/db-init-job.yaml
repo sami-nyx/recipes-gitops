@@ -1,0 +1,125 @@
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: {{ .Values.recipesApi.name }}-db-init
+  labels:
+    app: {{ .Values.recipesApi.name }}
+
+spec:
+  backoffLimit: 4
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.recipesApi.name }}-db-init
+
+    spec:
+      restartPolicy: Never
+
+      # ============================================================
+      # Wait for PostgreSQL
+      # ============================================================
+
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+
+              until pg_isready \
+                -h "$DB_HOST" \
+                -p "$DB_PORT" \
+                -U "$DB_USER_NAME"
+              do
+                echo "PostgreSQL is not ready yet..."
+                sleep 2
+              done
+
+              echo "PostgreSQL is ready."
+
+          env:
+            - name: DB_HOST
+              value: {{ .Values.recipesApi.dbHost | quote }}
+
+            - name: DB_PORT
+              value: "5432"
+
+            - name: DB_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-app
+                  key: username
+
+
+      # ============================================================
+      # Initialize Database
+      # ============================================================
+
+      containers:
+        - name: init-db
+
+          image: "{{ .Values.recipesApi.imageName }}:{{ .Values.recipesApi.imageTag }}"
+          imagePullPolicy: {{ .Values.recipesApi.imagePullPolicy }}
+
+          command:
+            - python
+            - -c
+            - |
+              from app import create_app
+              from models.user import db
+
+              app = create_app()
+
+              with app.app_context():
+                  db.create_all()
+
+              print("Database initialization completed successfully")
+
+
+          # ========================================================
+          # Application Configuration
+          # ========================================================
+
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.recipesApi.name }}-config
+
+            - secretRef:
+                name: recipes-api-secret
+
+
+          # ========================================================
+          # CNPG Database Credentials
+          # ========================================================
+
+          env:
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-app
+                  key: dbname
+
+            - name: DB_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-app
+                  key: username
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-app
+                  key: password
+
+
+          # ========================================================
+          # Resources
+          # ========================================================
+
+          resources:
+            {{- toYaml .Values.recipesApi.resources | nindent 12 }}
