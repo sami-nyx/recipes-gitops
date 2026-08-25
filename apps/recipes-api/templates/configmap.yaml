@@ -8,3 +8,4 @@ data:
   FLASK_ENV: {{ .Values.recipesApi.flaskEnv | quote }}
   DB_HOST: {{ default (printf "%s-postgres-rw" .Release.Name) .Values.recipesApi.dbHost | quote }}
   DB_PORT: {{ .Values.recipesApi.dbPort | quote }}
+  PORT: {{ .Values.recipesApi.port | quote }}
