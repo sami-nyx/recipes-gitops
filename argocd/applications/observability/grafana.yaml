@@ -14,19 +14,27 @@ spec:
     targetRevision: 12.10.4
     helm:
       values: |
-        # Optional: persist Grafana data if needed, or keep ephemeral for portfolio
         persistence:
           enabled: false
+
+        # Automatically provision dashboards
         dashboards:
           default:
             eks-prometheus:
               gnetId: 1860
               revision: 45
               datasource: Prometheus
+
+        # Provision datasources for Prometheus and Loki
         datasources:
           datasources.yaml:
             apiVersion: 1
             datasources:
+              - name: Prometheus
+                type: prometheus
+                access: proxy
+                url: http://prometheus-server.monitoring.svc.cluster.local
+                isDefault: false
               - name: Loki
                 type: loki
                 access: proxy
