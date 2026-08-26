@@ -3,7 +3,10 @@ kind: Application
 metadata:
   name: fluent-bit
   namespace: argocd
-  argocd.argoproj.io/sync-wave: "2"
+  annotations:
+    # Was previously a stray top-level metadata key (not under
+    # `annotations:`), so Argo CD never actually applied a sync-wave here.
+    argocd.argoproj.io/sync-wave: "0"
 
   finalizers:
     - resources-finalizer.argocd.argoproj.io
