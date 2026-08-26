@@ -9,6 +9,14 @@ grafana:
       enabled: true
       label: grafana_dashboard
       labelValue: "1"
+      # Default is /tmp/dashboards - matched below by default_home_dashboard_path.
+
+  # Show our custom recipes-api dashboard (sidecar-provisioned above, into
+  # sidecar.dashboards.folder) when a user opens Grafana with no dashboard
+  # selected, instead of Grafana's built-in blank home page.
+  grafana.ini:
+    dashboards:
+      default_home_dashboard_path: /tmp/dashboards/recipes-api-dashboard.json
 
   dashboardProviders:
     dashboardproviders.yaml:
