@@ -5,6 +5,12 @@ metadata:
   name: {{ .Values.recipesApi.name }}-config
   labels:
     app: {{ .Values.recipesApi.name }}
+  annotations:
+    # Must exist before the db-init pre-install/pre-upgrade hook Job runs
+    # (it's envFrom'd there), so hook it in at a lower weight than that Job.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
 
 data:
   # ============================================================
