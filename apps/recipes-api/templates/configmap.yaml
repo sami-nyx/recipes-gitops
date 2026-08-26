@@ -26,6 +26,6 @@ data:
 
   DB_SCHEME: {{ .Values.recipesApi.dbScheme | quote }}
 
-  DB_HOST: {{ .Values.recipesApi.dbHost | quote }}
+  DB_HOST: {{ .Values.recipesApi.dbHost | default (printf "%s-postgres-rw" .Release.Name) | quote }}
 
   DB_PORT: {{ .Values.recipesApi.dbPort | quote }}

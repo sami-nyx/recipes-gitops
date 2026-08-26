@@ -26,6 +26,8 @@ recipesApi:
 
   port: 5000
 
+  servicePort: 80
+
   appVersion: "v1.0.29"
 
   corsOrigin: "https://www.weaversls.com"
@@ -37,7 +39,9 @@ recipesApi:
 
   dbScheme: "postgresql+psycopg2"
 
-  dbHost: "recipes-api-postgres-rw"
+  # Leave blank to default to "<release-name>-postgres-rw" (the CNPG read-write
+  # service for this release); override only if the DB host differs from that.
+  dbHost: ""
 
   dbPort: 5432
 

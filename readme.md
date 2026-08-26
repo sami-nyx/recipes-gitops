@@ -1,54 +1,56 @@
-```markdown
-# Recipes Platform GitOps Infrastructure
+# Recipes Platform — GitOps Infrastructure
 
-A production-grade, declarative GitOps platform deployed on AWS EKS using Terraform, GitHub Actions OIDC, Argo CD (App of Apps pattern), and External Secrets.
+Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the cluster once, then Argo CD (App of Apps) owns everything that runs on it, sourced entirely from this repo.
 
----
+## How it flows
 
-## 🏗️ Project Architecture & Directory Structure
+1. **Terraform** provisions the VPC, EKS cluster, IAM OIDC provider, and access entries.
+2. **`bootstrap/bootstrap.sh`** runs once against the new cluster: installs the External Secrets Operator, injects the GitHub credentials Argo CD needs to read this repo, then applies `bootstrap/root-app.yaml`.
+3. **`recipes-root`** (the root Argo CD Application from step 2) recursively watches `argocd/applications/`. Every `.yaml` file in there is one Argo CD `Application` — add a file, get a new Application, no manual `argocd app create`.
+4. Each Application's `source` points either at a **remote Helm chart** (`repoURL` + `chart` + `targetRevision`) or at a **path in this repo** (`repoURL` = this repo + `path`). The table below shows which.
+
+## Repo layout
 
 ```text
 .
-├── apps/                        # Custom application helm charts (e.g., recipes-api)
-│   └── recipes-api/             # Core backend service chart
-├── argocd/                      # Argo CD application definitions (App of Apps architecture)
-│   └── applications/
-│       ├── observability/       # Monitoring & logging (Prometheus, Grafana, Loki, Fluent Bit)
-│       ├── platform/            # Core cluster add-ons (Cert-Manager, NGINX Ingress, CloudNativePG, Storage)
-│       ├── security/            # RBAC and Secrets management
-│       └── workloads/           # Application layers (Postgres database, Recipes API)
-├── bootstrap/                   # Cluster bootstrapping automation and initial manifests
-│   ├── bootstrap.sh             # End-to-end bootstrap orchestration script
-│   ├── manifests/               # Core cluster secrets and SecretStore templates
-│   ├── root-app.yaml            # Argo CD root "App of Apps" manifest
-│   └── values/                  # Operator override values (External Secrets, etc.)
-└── platform/                    # Platform configurations managed by Argo CD
-    ├── cert-manager/            # Cluster Issuers and certificate definitions
-    ├── external-secrets/        # ExternalSecret definitions synced from AWS/GoDaddy
-    ├── postgres/                # CloudNativePG database cluster declarations
-    ├── rbac/                    # Cluster Roles and access control
-    └── storage/                 # Storage classes (e.g., GP3 EBS provisioner)
-
+├── apps/                     # Local Helm charts owned by this repo
+│   ├── recipes-api/          # The Flask backend — Deployment, Service, Ingress, ConfigMap, DB-init Job
+│   └── grafana/               # Wraps the upstream grafana chart + our own dashboards/*.json
+├── argocd/applications/      # One file = one Argo CD Application (see table below)
+│   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit
+│   ├── platform/             # Cert-manager, NGINX Ingress, CloudNativePG, storage
+│   ├── security/             # RBAC, External Secrets
+│   └── workloads/            # Postgres cluster, recipes-api
+├── bootstrap/                # One-time cluster bootstrap (script + root Application)
+├── platform/                 # Raw manifests referenced by argocd/applications/{platform,security,workloads}
+└── readme.md
 ```
 
----
+## Applications reference
 
-## 🚀 Core Components & Technologies
+| Application | Source | Deploys into |
+|---|---|---|
+| `recipes-api` | this repo · `apps/recipes-api` | `recipes` |
+| `recipes-postgres` | this repo · `platform/postgres` | `recipes` |
+| `grafana` | this repo · `apps/grafana` | `monitoring` |
+| `prometheus`, `loki`, `fluent-bit` | remote charts | `monitoring` / `logging` |
+| `cert-manager`, `nginx-ingress`, `cloud-native-pg`, `go-daddy-webhook` | remote charts | `platform` add-ons |
+| `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
+| `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
+| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` |
+| `secrets` | this repo · `platform/external-secrets` | `recipes` (`ExternalSecret`s) |
 
-* **Infrastructure Provisioning:** AWS EKS managed via custom Terraform modules with modern **AWS EKS Access Entries** (`API` authentication mode) for secure RBAC.
-* **CI/CD Pipeline:** GitHub Actions with secure **OIDC (OpenID Connect)** federation—eliminating hardcoded AWS credentials.
-* **GitOps Continuous Delivery:** **Argo CD** deployed using the scalable **App of Apps** pattern to maintain declarative desired states.
-* **Secrets Management:** **External Secrets Operator** securely bridging AWS Secrets Manager/Parameter Store and GoDaddy APIs directly into native Kubernetes secrets.
-* **Observability & Storage:** Fully integrated Prometheus, Grafana, Loki, Fluent Bit logging pipeline, CloudNativePG operator for resilient PostgreSQL workloads, and NGINX Ingress controller routing.
+## Adding a new component
 
----
+- **It's a third-party thing with its own Helm chart** (an operator, an ingress controller, …) → add an Application under `argocd/applications/platform/` (or wherever fits) with `source.repoURL`/`chart`/`targetRevision` pointing at the upstream chart, values inlined under `source.helm.values`.
+- **It's ours** (a service we wrote, or an upstream chart we need to customize/extend) → give it a real local Helm chart under `apps/<name>/` (`Chart.yaml` + `values.yaml` + `templates/`) and point an Application's `source.path` at it. `apps/grafana` is the reference example: it depends on the upstream `grafana` chart and adds a small template that turns any file under `dashboards/*.json` into a provisioned dashboard — no chart forking needed.
 
-## 🛠️ Bootstrapping & Deployment Flow
+## Core technologies
 
-1. **Infrastructure Provisioning:** Terraform sets up the AWS VPC, EKS cluster, IAM OIDC provider, and access entries.
-2. **Platform Bootstrap:** The GitHub Actions bootstrap job configures `kubectl` and `helm`, installs the External Secrets Operator, injects root GitHub credentials, and deploys the Argo CD root application (`recipes-root`).
-3. **GitOps Reconciliation:** Argo CD cascades through ordered sync waves to provision storage classes, operators, monitoring suites, and application microservices safely and sequentially.
-
-```
-
-```
+- **Infra:** AWS EKS via Terraform, using EKS Access Entries (`API` auth mode) for RBAC.
+- **CI/CD:** GitHub Actions with OIDC federation — no long-lived AWS credentials.
+- **Delivery:** Argo CD, App of Apps pattern.
+- **Secrets:** External Secrets Operator, bridging AWS Secrets Manager / Parameter Store and the GoDaddy API into native Kubernetes Secrets.
+- **Observability:** Prometheus + Grafana + Loki + Fluent Bit.
+- **Data:** CloudNativePG-managed PostgreSQL.
+- **Ingress:** NGINX Ingress + cert-manager (Let's Encrypt via the GoDaddy DNS webhook).

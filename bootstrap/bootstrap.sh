@@ -3,6 +3,9 @@ set -euo pipefail
 
 ESO_VERSION="2.9.0"
 ARGOCD_CHART_VERSION="10.4.0"
+METRICS_SERVER_VERSION="v0.9.0"
+
+WEBHOOK_WAIT_TIMEOUT_SECONDS=180
 
 COLOR_RESET="\033[0m"
 COLOR_INFO="\033[1;34m"
@@ -16,6 +19,10 @@ log_info() {
 
 log_success() {
     echo -e "${COLOR_SUCCESS}[SUCCESS]${COLOR_RESET} $1"
+}
+
+log_warn() {
+    echo -e "${COLOR_WARN}[WARN]${COLOR_RESET} $1"
 }
 
 log_error() {
@@ -46,8 +53,18 @@ aws eks update-kubeconfig \
     --region "$CLUSTER_REGION" \
     --name "$CLUSTER_NAME"
 
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 log_success "Kubeconfig updated."
+
+log_info "Checking whether this cluster has already been bootstrapped..."
+
+if kubectl get deployment argocd-server -n argocd &>/dev/null; then
+    if [ "${CONFIRM_REBOOTSTRAP:-false}" != "true" ]; then
+        log_error "Argo CD is already running on '$CLUSTER_NAME'. Re-running bootstrap.sh against a live cluster can reset any out-of-band Helm release drift. Re-run with CONFIRM_REBOOTSTRAP=true if this is intentional."
+    fi
+    log_warn "CONFIRM_REBOOTSTRAP=true set — proceeding against an already-bootstrapped cluster."
+fi
+
+kubectl apply -f "https://github.com/kubernetes-sigs/metrics-server/releases/download/${METRICS_SERVER_VERSION}/components.yaml"
 
 log_info "Configuring Helm repositories..."
 
@@ -73,9 +90,14 @@ kubectl wait \
     --timeout=90s \
     crd/clustersecretstores.external-secrets.io
 log_info "Waiting for External Secrets webhook endpoints to be ready..."
+webhook_wait_elapsed=0
 while [ -z "$(kubectl get endpoints external-secrets-webhook -n external-secrets -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)" ]; do
+    if [ "$webhook_wait_elapsed" -ge "$WEBHOOK_WAIT_TIMEOUT_SECONDS" ]; then
+        log_error "Timed out after ${WEBHOOK_WAIT_TIMEOUT_SECONDS}s waiting for external-secrets-webhook endpoints."
+    fi
     echo "Waiting for webhook endpoints..."
     sleep 2
+    webhook_wait_elapsed=$((webhook_wait_elapsed + 2))
 done
 
 log_success "External Secrets Operator is ready."
@@ -101,7 +123,8 @@ log_info "Installing Argo CD..."
 helm upgrade --install argocd \
     argocd/argo-cd \
     --namespace argocd \
-    --version "$ARGOCD_CHART_VERSION"
+    --version "$ARGOCD_CHART_VERSION" \
+    --reuse-values
 
 log_info "Deploying Argo CD App Of Apps"
 kubectl apply -f ./root-app.yaml

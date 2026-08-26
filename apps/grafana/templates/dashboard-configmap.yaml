@@ -1,0 +1,20 @@
+{{/*
+Wraps each JSON file under dashboards/ in a ConfigMap labeled for the Grafana
+sidecar (grafana.sidecar.dashboards.enabled, see values.yaml) to pick up and
+provision automatically - no need to touch the grafana subchart itself to add
+a dashboard, just drop a new file in dashboards/.
+*/}}
+{{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+{{- $name := base $path | trimSuffix ".json" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  {{ base $path }}:
+    {{- toYaml ($.Files.Get $path) | nindent 4 }}
+---
+{{- end }}
