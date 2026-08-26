@@ -43,7 +43,7 @@ spec:
               - name: Prometheus
                 type: prometheus
                 access: proxy
-                url: http://prometheus-server.monitoring.svc.cluster.local
+                url: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
                 isDefault: false
               - name: Loki
                 type: loki
