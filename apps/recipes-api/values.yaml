@@ -32,7 +32,7 @@ recipesApi:
   # ============================================================
   imagePullPolicy: IfNotPresent
   imageName: 889867978066.dkr.ecr.ap-south-1.amazonaws.com/protfolio-recipes
-  imageTag: v1.0.30
+  imageTag: v1.0.31
   # ============================================================
   # Resources
   # ============================================================
