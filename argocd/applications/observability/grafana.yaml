@@ -16,15 +16,25 @@ spec:
       values: |
         persistence:
           enabled: false
+        dashboardProviders:
+          dashboardproviders.yaml:
+            apiVersion: 1
+            providers:
+              - name: default
+                orgId: 1
+                folder: ""
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards/default
 
-        # Automatically provision dashboards
         dashboards:
           default:
             eks-prometheus:
               gnetId: 1860
               revision: 45
               datasource: Prometheus
-
         # Provision datasources for Prometheus and Loki
         datasources:
           datasources.yaml:
