@@ -52,9 +52,23 @@ spec:
               name: {{ .Release.Name }}-postgres-app
               key: password
         # --- HEALTHCHECKS ---
+        # All three map directly to the app's own views/system_views.py,
+        # which was built with exactly this split in mind (see that
+        # file's own docstrings): /health never touches the database - a
+        # DB hiccup should make this pod stop *receiving* traffic
+        # (readiness), not get killed and restarted (liveness), since
+        # restarting the process does nothing to fix a database problem.
+        startupProbe:
+          httpGet:
+            path: /system/startup
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 12
+
         readinessProbe:
           httpGet:
-            path: /system/health
+            path: /system/ready
             port: http
           initialDelaySeconds: 5
           periodSeconds: 5
