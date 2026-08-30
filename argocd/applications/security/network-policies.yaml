@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: network-policies
+  namespace: argocd
+  annotations:
+    # After recipes-api (wave 10) - not strictly required for
+    # NetworkPolicy to apply correctly (it matches by label regardless of
+    # apply order), but applying it once the workloads it references
+    # already exist means the first sync is immediately verifiable
+    # against real running pods.
+    argocd.argoproj.io/sync-wave: "20"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/sami-nyx/recipes-gitops.git
+    targetRevision: main
+    path: platform/network-policies
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: recipes
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
