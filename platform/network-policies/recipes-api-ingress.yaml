@@ -1,0 +1,41 @@
+# Only two things ever legitimately open a connection to recipes-api:
+# nginx-ingress (real app traffic) and Prometheus (scraping /metrics).
+# Once this policy selects recipes-api pods, everything else - any other
+# namespace, any other pod - is denied by default; that's inherent to
+# NetworkPolicy itself, not a separate rule to write.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: recipes-api-ingress
+  namespace: recipes
+spec:
+  podSelector:
+    matchLabels:
+      app: recipes-api
+  policyTypes:
+    - Ingress
+  ingress:
+    # nginx-ingress -> recipes-api, the actual request path.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5000
+
+    # Prometheus -> recipes-api /metrics (see apps/recipes-api's
+    # ServiceMonitor). Scoped to the actual Prometheus server pod
+    # (app.kubernetes.io/name: prometheus, the prometheus-operator's own
+    # label), not the whole monitoring namespace - Grafana and
+    # Alertmanager also live there but have no reason to reach this.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 5000

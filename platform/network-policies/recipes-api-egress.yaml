@@ -1,0 +1,45 @@
+# What actually limits a compromised recipes-api, not just what limits
+# who can reach it - see postgres-ingress.yaml's own comment for why
+# that's a different, necessary problem: postgres-ingress only stops
+# *other* pods from reaching Postgres, it does nothing once the attacker
+# already has legitimate access via a compromised recipes-api itself.
+# This is the piece that actually bounds what that pod can do outbound.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: recipes-api-egress
+  namespace: recipes
+spec:
+  podSelector:
+    matchLabels:
+      app: recipes-api
+  policyTypes:
+    - Egress
+  egress:
+    # Postgres - the one thing this app actually needs to reach.
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: recipes-api-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # DNS - easy to forget, immediately fatal if missed: without this,
+    # recipes-api can't even resolve recipes-api-postgres-rw by name, so
+    # it fails before the rule above is ever relevant. recipes-api never
+    # calls AWS directly (its secrets arrive pre-injected as env vars via
+    # the External Secrets Operator, a different pod entirely), so no
+    # egress beyond this and Postgres is needed.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

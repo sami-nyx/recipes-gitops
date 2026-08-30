@@ -1,0 +1,44 @@
+# The actual point of this whole change: today, any pod in any namespace
+# can open a raw connection to Postgres. After this, only the app that
+# owns the data, the one-shot migration Job, and the operator that
+# manages the cluster can - confirmed against the live cluster's own
+# labels (kubectl get pods -n recipes --show-labels), not assumed.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-ingress
+  namespace: recipes
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: recipes-api-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    # recipes-api (the running app) and the db-init Job (a one-shot
+    # migration/seed run before each deploy) - two different `app`
+    # label values, not one workload wearing two labels. Missing the
+    # second one would break every future deploy's db-init step while
+    # leaving the running app looking completely fine.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: recipes-api
+        - podSelector:
+            matchLabels:
+              app: recipes-api-db-init
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # The CloudNativePG operator - lives in cnpg-system, a different
+    # namespace than the Cluster it manages. Needed for health checks,
+    # failover, and (once HA/backups are configured) replication -
+    # without this the operator can't manage the cluster it owns.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - protocol: TCP
+          port: 5432
