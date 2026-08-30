@@ -50,7 +50,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 - **Infra:** AWS EKS via Terraform, using EKS Access Entries (`API` auth mode) for RBAC.
 - **CI/CD:** GitHub Actions with OIDC federation — no long-lived AWS credentials.
 - **Delivery:** Argo CD, App of Apps pattern.
-- **Secrets:** External Secrets Operator, bridging AWS Secrets Manager / Parameter Store and the GoDaddy API into native Kubernetes Secrets.
+- **Secrets:** External Secrets Operator, bridging AWS Secrets Manager into native Kubernetes Secrets.
 - **Observability:** Prometheus + Grafana + Loki + Fluent Bit.
 - **Data:** CloudNativePG-managed PostgreSQL.
-- **Ingress:** NGINX Ingress + cert-manager (Let's Encrypt via the GoDaddy DNS webhook).
+- **Ingress:** NGINX Ingress + cert-manager (Let's Encrypt via Route53 DNS-01, IRSA-authenticated - see recipes-aws-infra's readme.md for the migration off GoDaddy).
