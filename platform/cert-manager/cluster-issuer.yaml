@@ -13,14 +13,16 @@ spec:
       name: letsencrypt-prod-key
 
     solvers:
+      # Native cert-manager Route53 support - no third-party webhook, no
+      # API key secret. Auth is IRSA via the cert-manager ServiceAccount's
+      # own eks.amazonaws.com/role-arn annotation (see
+      # argocd/applications/platform/cert-manager.yaml), so no `role:`
+      # field is needed here either.
+      #
+      # REPLACE_ME: the hosted zone ID from the manually-created Route53
+      # zone (see readme.md's Route53 migration section) - ArgoCD applies
+      # this file as-is, it can't fill this in for you.
       - dns01:
-          webhook:
-            groupName: acme.weaversls.com
-            solverName: godaddy
-            config:
-              production: true
-
-              apiKeySecretRef:
-                name: godaddy-api-key-secret
-                key: api-key
-                secret: secret
+          route53:
+            region: ap-south-1
+            hostedZoneID: REPLACE_ME_ROUTE53_ZONE_ID

@@ -22,6 +22,16 @@ spec:
         crds:
           enabled: true
 
+        # IRSA for the Route53 DNS-01 solver (see
+        # platform/cert-manager/cluster-issuer.yaml) - replaces the
+        # GoDaddy webhook's API-key secret entirely.
+        # REPLACE_ME: the cert_manager_route53_role_arn output from the
+        # recipes-aws-infra Terraform apply - same as the zone ID next to
+        # it, ArgoCD applies this file as-is and can't fill this in.
+        serviceAccount:
+          annotations:
+            eks.amazonaws.com/role-arn: REPLACE_ME_CERT_MANAGER_ROUTE53_ROLE_ARN
+
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
