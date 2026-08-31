@@ -5,7 +5,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 ## How it flows
 
 1. **Terraform** provisions the VPC, EKS cluster, IAM OIDC provider, and access entries.
-2. **`bootstrap/bootstrap.sh`** runs once against the new cluster: installs the External Secrets Operator, injects the GitHub credentials Argo CD needs to read this repo, then applies `bootstrap/root-app.yaml`.
+2. **`bootstrap/bootstrap.sh`** runs once against the new cluster: installs the External Secrets Operator, injects the GitHub credentials Argo CD needs to read this repo, then applies `bootstrap/root-app.yaml`. Normally run by `recipes-aws-infra`'s `tf-apply-eks.yaml` workflow, using its `terraform apply` outputs - `bootstrap/bootstrap_local.sh <path-to-local-recipes-aws-infra-clone>` does the same thing locally, reading those outputs straight from `terraform output` instead, for when you'd rather not spend GitHub Actions minutes on it.
 3. **`recipes-root`** (the root Argo CD Application from step 2) recursively watches `argocd/applications/`. Every `.yaml` file in there is one Argo CD `Application` — add a file, get a new Application, no manual `argocd app create`.
 4. Each Application's `source` points either at a **remote Helm chart** (`repoURL` + `chart` + `targetRevision`) or at a **path in this repo** (`repoURL` = this repo + `path`). The table below shows which.
 
