@@ -35,6 +35,16 @@ spec:
     # namespace than the Cluster it manages. Needed for health checks,
     # failover, and (once HA/backups are configured) replication -
     # without this the operator can't manage the cluster it owns.
+    #
+    # Port 8000 is the instance manager's HTTP status API (see
+    # `kubectl get pod <postgres-pod> -o jsonpath='{.spec.containers[*].ports}'`)
+    # - separate from 5432. The operator polls it to build the Cluster's
+    # status (instance readiness, primary/replica role). Without it, the
+    # operator can still read/write Postgres normally, but every status
+    # poll fails ("Instance Status Extraction Error: HTTP communication
+    # issue"), which Argo CD's custom health check doesn't recognize -
+    # so it shows the Application as Unknown instead of Healthy even
+    # though the database itself is fine.
     - from:
         - namespaceSelector:
             matchLabels:
@@ -42,3 +52,5 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+        - protocol: TCP
+          port: 8000
