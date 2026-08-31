@@ -18,8 +18,8 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 │   └── grafana/               # Wraps the upstream grafana chart + our own dashboards/*.json
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
 │   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit
-│   ├── platform/             # Cert-manager, NGINX Ingress, CloudNativePG, storage
-│   ├── security/             # RBAC, External Secrets
+│   ├── platform/             # Cert-manager, cert-issuer, NGINX Ingress, CloudNativePG, storage
+│   ├── security/             # RBAC, NetworkPolicies, External Secrets
 │   └── workloads/            # Postgres cluster, recipes-api
 ├── bootstrap/                # One-time cluster bootstrap (script + root Application)
 ├── platform/                 # Raw manifests referenced by argocd/applications/{platform,security,workloads}
@@ -32,13 +32,22 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 |---|---|---|
 | `recipes-api` | this repo · `apps/recipes-api` | `recipes` |
 | `recipes-postgres` | this repo · `platform/postgres` | `recipes` |
+| `network-policies` | this repo · `platform/network-policies` | `recipes` (default-deny `NetworkPolicy`s - see below) |
 | `grafana` | this repo · `apps/grafana` | `monitoring` |
 | `prometheus`, `loki`, `fluent-bit` | remote charts | `monitoring` / `logging` |
-| `cert-manager`, `nginx-ingress`, `cloud-native-pg`, `go-daddy-webhook` | remote charts | `platform` add-ons |
+| `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
 | `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
-| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` |
+| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` (leftover from the GoDaddy webhook cert-manager replaced - grants access to an API group that no longer exists; harmless, but pending removal) |
 | `secrets` | this repo · `platform/external-secrets` | `recipes` (`ExternalSecret`s) |
+
+**`network-policies`**: three manifests, all scoped to the `recipes` namespace and targeting real, live-tested traffic paths rather than a blanket deny-all:
+
+- `postgres-ingress.yaml` — only `recipes-api` and the one-shot `recipes-api-db-init` Job can open a Postgres connection (port 5432); the CNPG operator (`cnpg-system` namespace) gets 5432 *and* 8000 (its instance-manager status API - miss this one and the operator can still read/write the database but every status poll fails, showing the Application as `Unknown` instead of `Healthy` in Argo CD even though nothing is actually wrong).
+- `recipes-api-ingress.yaml` — only `nginx-ingress` and Prometheus (by pod label, scraping the pod IP directly - `ServiceMonitor` bypasses the Service) can reach `recipes-api`.
+- `recipes-api-egress.yaml` — `recipes-api` can reach Postgres and DNS, nothing else.
+
+Requires the VPC CNI's `enableNetworkPolicy` addon config to be `true` (set in `recipes-aws-infra`'s Terraform) - without it these manifests apply cleanly but are never actually enforced.
 
 ## Adding a new component
 
@@ -54,3 +63,4 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 - **Observability:** Prometheus + Grafana + Loki + Fluent Bit.
 - **Data:** CloudNativePG-managed PostgreSQL.
 - **Ingress:** NGINX Ingress + cert-manager (Let's Encrypt via Route53 DNS-01, IRSA-authenticated - see recipes-aws-infra's readme.md for the migration off GoDaddy).
+- **Network policy:** default-deny `NetworkPolicy`s scoping `recipes` namespace traffic to real, named paths (app ↔ Postgres, ingress/Prometheus ↔ app) - see the `network-policies` entry below.
