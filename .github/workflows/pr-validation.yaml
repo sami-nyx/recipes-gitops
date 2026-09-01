@@ -1,0 +1,133 @@
+name: PR Validation
+
+# Pure validation - this repo is pure GitOps (no app code, no
+# Terraform), and Argo CD, already running in-cluster, is the only
+# thing that ever deploys it, triggered by a merge to main itself.
+# Nothing in this workflow ever touches the real cluster or needs
+# cluster/AWS credentials - a job here that ran `kubectl apply` would
+# just create a second, competing path to deploy the same resources
+# Argo CD's own selfHeal already owns.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+
+  yaml-lint:
+    name: YAML lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install yamllint
+        run: pip install --quiet yamllint
+
+      - name: Lint
+        run: yamllint -c .yamllint .
+
+  dashboard-json:
+    name: Grafana dashboard JSON
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate dashboard JSON
+        run: |
+          for f in apps/grafana/dashboards/*.json; do
+            echo "Checking $f"
+            python3 -m json.tool "$f" > /dev/null
+          done
+
+  helm-charts:
+    name: Helm chart - ${{ matrix.chart }}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        chart: [recipes-api, grafana]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: azure/setup-helm@bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a # v4
+        with:
+          version: latest
+
+      - name: helm dependency build
+        # A no-op for recipes-api (no dependencies) - needed for
+        # grafana, which wraps the upstream grafana chart.
+        run: helm dependency build apps/${{ matrix.chart }}
+
+      - name: helm lint
+        run: helm lint apps/${{ matrix.chart }}
+
+      - name: helm template
+        run: helm template ${{ matrix.chart }} apps/${{ matrix.chart }} > rendered.yaml
+
+      - name: Install kubeconform
+        run: curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+
+      - name: Validate rendered manifests against real CRD/K8s schemas
+        run: |
+          ./kubeconform -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -ignore-missing-schemas \
+            rendered.yaml
+
+  manifest-schema:
+    name: Raw manifest schema validation
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install kubeconform
+        run: curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+
+      - name: Validate every raw manifest (Argo CD Applications, platform/*, bootstrap)
+        # find, not a `**` glob - this runs under bash, which doesn't
+        # expand `**` recursively without `shopt -s globstar`, unlike
+        # the zsh this was developed against. bootstrap/values/*.yaml
+        # is excluded on purpose - those are Helm values files (no
+        # apiVersion/kind), not K8s manifests.
+        run: |
+          find argocd/applications platform bootstrap -name "*.yaml" -not -path "bootstrap/values/*" > manifest-files.txt
+          ./kubeconform -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -ignore-missing-schemas \
+            $(cat manifest-files.txt)
+
+  alert-rules:
+    name: PrometheusRule syntax (promtool)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install promtool
+        run: |
+          curl -sL https://github.com/prometheus/prometheus/releases/download/v3.0.1/prometheus-3.0.1.linux-amd64.tar.gz \
+            | tar xz --strip-components=1 prometheus-3.0.1.linux-amd64/promtool
+
+      - name: Extract PrometheusRule specs and check them
+        # promtool expects a bare `groups:` file, not a full
+        # apiVersion/kind/metadata/spec-wrapped PrometheusRule - pull
+        # just .spec out first, matching exactly what the Prometheus
+        # Operator itself feeds to the underlying rule engine.
+        run: |
+          python3 -c "
+          import yaml, glob
+          for path in glob.glob('platform/alerts/*.yaml'):
+              for doc in yaml.safe_load_all(open(path)):
+                  if not doc or doc.get('kind') != 'PrometheusRule':
+                      continue
+                  out = path.replace('/', '_') + '.rules.yaml'
+                  with open(out, 'w') as f:
+                      yaml.dump({'groups': doc['spec']['groups']}, f)
+                  print(out)
+          " > extracted-files.txt
+          while read -r f; do
+            ./promtool check rules "$f"
+          done < extracted-files.txt
