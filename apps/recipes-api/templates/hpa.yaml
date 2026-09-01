@@ -1,0 +1,38 @@
+# Owns spec.replicas on the recipes-api Deployment - deployment.yaml
+# deliberately has no `replicas` field so Argo CD's selfHeal (this
+# Application has automated.selfHeal: true) never treats the HPA's
+# scaling as drift and resets it. metrics-server is already installed
+# by bootstrap.sh, so CPU/memory utilization metrics are available with
+# no extra components (no Prometheus Adapter needed).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.recipesApi.name }}
+  labels:
+    app: {{ .Values.recipesApi.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.recipesApi.name }}
+  # minReplicas is 2, not 1 - the point of this HPA is removing the
+  # single-point-of-failure a fixed replicas: 1 was, so idling back
+  # down to 1 would quietly undo that. maxReplicas is capped at 4:
+  # the node group is a fixed 2 nodes with no cluster autoscaler, and
+  # Postgres/ingress/observability already share that capacity - raise
+  # it once real usage shows headroom, rather than guessing high now.
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
