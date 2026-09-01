@@ -54,3 +54,18 @@ spec:
           port: 5432
         - protocol: TCP
           port: 8000
+
+    # Prometheus - scrapes the pod IP directly on 9187 (CNPG's
+    # postgres_exporter port, see platform/postgres/podmonitor.yaml),
+    # same as it already does for recipes-api. Scoped to the actual
+    # Prometheus server pod, not the whole monitoring namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9187

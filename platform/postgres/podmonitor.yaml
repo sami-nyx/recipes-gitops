@@ -1,0 +1,25 @@
+# CNPG's own `spec.monitoring.enablePodMonitor` (on the Cluster CR) is
+# deprecated upstream in favor of hand-writing this - see
+# `kubectl explain cluster.spec.monitoring.enablePodMonitor`. Targets the
+# postgres_exporter port every CNPG instance pod already exposes (9187,
+# named "metrics" - confirmed live via
+# `kubectl get pod <postgres-pod> -o jsonpath='{.spec.containers[*].ports}'`),
+# no separate exporter deployment needed.
+#
+# `release: prometheus` is required for the kube-prometheus-stack
+# Prometheus CR to pick this up at all (its podMonitorSelector matches
+# on that label) - the same requirement apps/recipes-api's own
+# ServiceMonitor already relies on.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: recipes-api-postgres
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      cnpg.io/cluster: recipes-api-postgres
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
