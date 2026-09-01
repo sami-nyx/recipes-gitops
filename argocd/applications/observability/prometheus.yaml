@@ -14,8 +14,8 @@ spec:
   project: default
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
-    chart: kube-prometheus-stack 
-    targetRevision:  88.3.0  
+    chart: kube-prometheus-stack
+    targetRevision: 88.3.0
     helm:
       releaseName: prometheus
       values: |
@@ -89,5 +89,5 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
-    - ServerSideApply=true
+      - CreateNamespace=true
+      - ServerSideApply=true

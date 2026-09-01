@@ -1,0 +1,23 @@
+# Only for raw K8s manifests / Argo CD Application definitions - Helm
+# templates under apps/*/templates/ contain Go template directives
+# ({{- if ... }}) that aren't valid standalone YAML at all, and are
+# validated instead by `helm lint`/`helm template` in CI, which
+# actually renders them first.
+extends: default
+
+ignore: |
+  apps/*/templates/
+  apps/*/charts/
+  apps/*/Chart.lock
+
+rules:
+  line-length: disable
+  document-start: disable
+  # Every Application/manifest in this repo starts with a blank line
+  # after the opening `---` in a few places, and some have deliberate
+  # blank lines between metadata fields for readability - not worth
+  # enforcing strictly here.
+  empty-lines:
+    max: 3
+  truthy:
+    check-keys: false
