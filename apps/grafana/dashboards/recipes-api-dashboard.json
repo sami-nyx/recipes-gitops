@@ -636,6 +636,48 @@
       ],
       "title": "Pod replicas (HPA current / min / max)",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "5xx responses as a fraction of total requests - the ratio, not just a raw count, so a spike reads the same whether traffic is light or heavy.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 0.01, "color": "yellow" },
+              { "value": 0.05, "color": "red" }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 38 },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "(sum(rate(flask_http_request_total{status=~\"5..\"}[5m])) or vector(0))\n/\nsum(rate(flask_http_request_total[5m]))",
+          "legendFormat": "error rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Error rate (5xx)",
+      "type": "stat"
     }
   ],
   "schemaVersion": 39,
@@ -696,6 +738,6 @@
   "timezone": "browser",
   "title": "Recipes API",
   "uid": "recipes-api-dashboard",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
