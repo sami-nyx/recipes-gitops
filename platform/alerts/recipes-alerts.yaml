@@ -1,0 +1,99 @@
+# `release: prometheus` is required for the kube-prometheus-stack
+# Prometheus CR to pick this up at all (its ruleSelector matches on
+# that label) - same requirement every ServiceMonitor/PodMonitor in
+# this repo already relies on.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: recipes-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: recipes-platform
+      rules:
+        # Node-level, not pod-level, on purpose: recipes-api's own HPA
+        # already targets 70% CPU/memory and scales out before pod-level
+        # 80% would ever be sustained - alerting on that too would just
+        # be re-announcing something already being handled
+        # automatically. Node headroom has no automatic mitigation at
+        # all (fixed 2-node group, no cluster autoscaler), which is
+        # what makes this actually actionable.
+        - alert: NodeCPUHigh
+          expr: |
+            100 - (
+              avg by (instance) (
+                rate(node_cpu_seconds_total{mode="idle"}[5m])
+              ) * 100
+            ) > 80
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} CPU above 80%"
+            description: "{{ $labels.instance }} has been at {{ printf \"%.1f\" $value }}% CPU for 10m+. Fixed 2-node group, no cluster autoscaler - this doesn't resolve on its own."
+
+        - alert: NodeMemoryHigh
+          expr: |
+            (
+              1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+            ) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} memory above 80%"
+            description: "{{ $labels.instance }} has been at {{ $value | humanizePercentage }} memory used for 10m+. Fixed 2-node group, no cluster autoscaler - this doesn't resolve on its own."
+
+        # Fires when the HPA has run out of room to help - current
+        # replicas pinned at maxReplicas for a sustained period. A
+        # human needs to either raise the ceiling or investigate,
+        # since autoscaling alone can't respond further.
+        - alert: RecipesApiHPAAtMax
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="recipes", horizontalpodautoscaler="recipes-api"}
+            ==
+            kube_horizontalpodautoscaler_spec_max_replicas{namespace="recipes", horizontalpodautoscaler="recipes-api"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "recipes-api HPA has been at max replicas for 10m+"
+            description: "Autoscaling has no more headroom to give (max: {{ $value }} replicas). Raise maxReplicas or investigate sustained load."
+
+        # Two-tier on purpose: the load generator's deliberate
+        # error-path traffic is all 4xx (401/403/404/409/429), not
+        # 5xx, so baseline should sit near 0% - warning at 2% catches
+        # a real regression early, critical at 10% is "this is
+        # seriously broken, page now". `or vector(0)` matches the
+        # recipes-api dashboard's own error-rate panel - without it
+        # the expression goes empty (not 0) whenever there simply are
+        # no 5xx responses, which is the common case, not an edge case.
+        - alert: RecipesApiErrorRateWarning
+          expr: |
+            (
+              (sum(rate(flask_http_request_total{status=~"5.."}[5m])) or vector(0))
+              /
+              sum(rate(flask_http_request_total[5m]))
+            ) > 0.02
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "recipes-api 5xx error rate above 2%"
+            description: "Error rate has been {{ $value | humanizePercentage }} for 5m+."
+
+        - alert: RecipesApiErrorRateCritical
+          expr: |
+            (
+              (sum(rate(flask_http_request_total{status=~"5.."}[5m])) or vector(0))
+              /
+              sum(rate(flask_http_request_total[5m]))
+            ) > 0.10
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "recipes-api 5xx error rate above 10%"
+            description: "Error rate has been {{ $value | humanizePercentage }} for 5m+ - most requests are still succeeding, but this is a serious regression."
