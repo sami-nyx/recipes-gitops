@@ -5,7 +5,10 @@ metadata:
   labels:
     app: {{ .Values.recipesApi.name }}
 spec:
-  replicas: {{ .Values.recipesApi.replicas }}
+  # No `replicas` field here on purpose - the HorizontalPodAutoscaler
+  # (templates/hpa.yaml) owns this. If it were set here, Argo CD's
+  # selfHeal would reset every scale-up the HPA does back to this value
+  # on the next sync, fighting it - see hpa.yaml's own comment.
   selector:
     matchLabels:
       app: {{ .Values.recipesApi.name }}
