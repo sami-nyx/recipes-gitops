@@ -394,13 +394,13 @@
         {
           "datasource": "Loki",
           "direction": "backward",
-          "editorMode": "builder",
-          "expr": "{app=\"recipes-api\"} |= ``",
+          "editorMode": "code",
+          "expr": "{app=\"recipes-api\"} | json message | line_format `{{.message}}` | regexp `\"(?P<method>[A-Z]+) \\S+ HTTP/[\\d.]+\" (?P<status>\\d+)` | method=~\"${method:regex}\" | status=~\"${status:regex}\"",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "logs",
+      "title": "logs (filter by Method / Status above)",
       "type": "table"
     },
     {
@@ -540,16 +540,162 @@
       ],
       "title": "K8S pod memory (recipes-api)",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "Current HPA-managed replica count against its configured min/max bounds - correlate with the CPU/memory panels above to see what actually drove a scaling event.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "pods",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 80, "color": "red" }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "min" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "max" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 31 },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"recipes\", horizontalpodautoscaler=\"recipes-api\"}",
+          "legendFormat": "current",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"recipes\", horizontalpodautoscaler=\"recipes-api\"}",
+          "legendFormat": "min",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"recipes\", horizontalpodautoscaler=\"recipes-api\"}",
+          "legendFormat": "max",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Pod replicas (HPA current / min / max)",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 39,
   "tags": ["recipes-api"],
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "Method",
+        "multi": true,
+        "name": "method",
+        "options": [
+          { "selected": true, "text": "All", "value": "$__all" },
+          { "selected": false, "text": "GET", "value": "GET" },
+          { "selected": false, "text": "POST", "value": "POST" },
+          { "selected": false, "text": "PUT", "value": "PUT" },
+          { "selected": false, "text": "PATCH", "value": "PATCH" },
+          { "selected": false, "text": "DELETE", "value": "DELETE" }
+        ],
+        "query": "GET,POST,PUT,PATCH,DELETE",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "Status",
+        "multi": true,
+        "name": "status",
+        "options": [
+          { "selected": true, "text": "All", "value": "$__all" },
+          { "selected": false, "text": "200", "value": "200" },
+          { "selected": false, "text": "201", "value": "201" },
+          { "selected": false, "text": "400", "value": "400" },
+          { "selected": false, "text": "401", "value": "401" },
+          { "selected": false, "text": "403", "value": "403" },
+          { "selected": false, "text": "404", "value": "404" },
+          { "selected": false, "text": "409", "value": "409" },
+          { "selected": false, "text": "429", "value": "429" },
+          { "selected": false, "text": "500", "value": "500" },
+          { "selected": false, "text": "503", "value": "503" }
+        ],
+        "query": "200,201,400,401,403,404,409,429,500,503",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
   "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "Recipes API",
   "uid": "recipes-api-dashboard",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
