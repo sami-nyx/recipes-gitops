@@ -1,0 +1,5 @@
+# Helm chart dependencies - resolved fresh by Argo CD at sync time, not
+# meant to be committed. Left behind locally by `helm dependency build`
+# when testing a chart's rendering (e.g. apps/grafana) before pushing.
+Chart.lock
+charts/
