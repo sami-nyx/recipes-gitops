@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cert-issuer
+description: The cluster's letsencrypt-prod ClusterIssuer - own chart, not a raw manifest, so region/email/zone-id are real Helm values instead of baked into the template.
+type: application
+version: 0.1.0

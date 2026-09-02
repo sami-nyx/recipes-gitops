@@ -1,0 +1,16 @@
+# ACME account email - Let's Encrypt sends expiry/account notices here.
+# A real, functional value, not a placeholder - just parameterized now
+# instead of buried in the template.
+email: saminsx@gmail.com
+
+# AWS region the Route53 hosted zone lives in. Matches recipes-aws-infra's
+# REGION variable - this project is single-region, so a plain default
+# here is fine; override via this Application's source.helm.values if
+# that ever changes, no template edit needed.
+region: ap-south-1
+
+# The hosted zone ID cert-manager's Route53 DNS-01 solver is scoped to.
+# Not sensitive data (see readme.md) - just not known until the zone is
+# created manually and/or Terraform hands it off. See readme.md's
+# "DNS: GoDaddy → Route53" section.
+route53ZoneId: REPLACE_ME_ROUTE53_ZONE_ID

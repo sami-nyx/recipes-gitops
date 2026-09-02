@@ -16,6 +16,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 ├── .github/workflows/        # pr-validation.yaml - lint/schema checks only, never deploys (see Core technologies)
 ├── apps/                     # Local Helm charts owned by this repo
 │   ├── recipes-api/          # The Flask backend — Deployment, Service, Ingress, ConfigMap, DB-init Job, HPA
+│   ├── cert-issuer/           # The letsencrypt-prod ClusterIssuer - region/email/zone-id as real values, not baked into a raw manifest
 │   └── grafana/               # Wraps the upstream grafana chart + our own dashboards/*.json
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
 │   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit, Alerting
@@ -38,7 +39,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 | `grafana` | this repo · `apps/grafana` | `monitoring` |
 | `prometheus`, `loki`, `fluent-bit` | remote charts | `monitoring` / `logging` |
 | `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
-| `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
+| `cert-issuer` | this repo · `apps/cert-issuer` | cluster-wide `ClusterIssuer` |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
 | `secrets` | this repo · `platform/external-secrets` | `recipes` + `monitoring` (`ExternalSecret`s - the recipes-api DB/JWT secrets and Alertmanager's Slack webhook) |
 | `alerts` | this repo · `platform/alerts` | cluster-wide `PrometheusRule` (see "Alerting" below) |
