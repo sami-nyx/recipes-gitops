@@ -6,7 +6,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   acme:
-    email: saminsx@gmail.com
+    email: {{ .Values.email | quote }}
     server: https://acme-v02.api.letsencrypt.org/directory
 
     privateKeySecretRef:
@@ -18,11 +18,7 @@ spec:
       # own eks.amazonaws.com/role-arn annotation (see
       # argocd/applications/platform/cert-manager.yaml), so no `role:`
       # field is needed here either.
-      #
-      # REPLACE_ME: the hosted zone ID from the manually-created Route53
-      # zone (see readme.md's Route53 migration section) - ArgoCD applies
-      # this file as-is, it can't fill this in for you.
       - dns01:
           route53:
-            region: ap-south-1
-            hostedZoneID: REPLACE_ME_ROUTE53_ZONE_ID
+            region: {{ .Values.region | quote }}
+            hostedZoneID: {{ .Values.route53ZoneId | quote }}

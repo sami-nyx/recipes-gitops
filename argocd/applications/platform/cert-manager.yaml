@@ -23,7 +23,7 @@ spec:
           enabled: true
 
         # IRSA for the Route53 DNS-01 solver (see
-        # platform/cert-manager/cluster-issuer.yaml) - replaces the
+        # apps/cert-issuer/templates/cluster-issuer.yaml) - replaces the
         # GoDaddy webhook's API-key secret entirely.
         # REPLACE_ME: the cert_manager_route53_role_arn output from the
         # recipes-aws-infra Terraform apply - same as the zone ID next to
