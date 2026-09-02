@@ -13,16 +13,18 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 
 ```text
 .
+├── .github/workflows/        # pr-validation.yaml - lint/schema checks only, never deploys (see Core technologies)
 ├── apps/                     # Local Helm charts owned by this repo
-│   ├── recipes-api/          # The Flask backend — Deployment, Service, Ingress, ConfigMap, DB-init Job
+│   ├── recipes-api/          # The Flask backend — Deployment, Service, Ingress, ConfigMap, DB-init Job, HPA
 │   └── grafana/               # Wraps the upstream grafana chart + our own dashboards/*.json
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
-│   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit
+│   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit, Alerting
 │   ├── platform/             # Cert-manager, cert-issuer, NGINX Ingress, CloudNativePG, storage
-│   ├── security/             # RBAC, NetworkPolicies, External Secrets
+│   ├── security/             # NetworkPolicies, External Secrets
 │   └── workloads/            # Postgres cluster, recipes-api
 ├── bootstrap/                # One-time cluster bootstrap (script + root Application)
-├── platform/                 # Raw manifests referenced by argocd/applications/{platform,security,workloads}
+├── platform/                 # Raw manifests referenced by argocd/applications/{observability,platform,security,workloads}
+│   └── alerts/                # PrometheusRule - see "Alerting" below
 └── readme.md
 ```
 
@@ -38,8 +40,8 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 | `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
 | `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
-| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` (leftover from the GoDaddy webhook cert-manager replaced - grants access to an API group that no longer exists; harmless, but pending removal) |
-| `secrets` | this repo · `platform/external-secrets` | `recipes` (`ExternalSecret`s) |
+| `secrets` | this repo · `platform/external-secrets` | `recipes` + `monitoring` (`ExternalSecret`s - the recipes-api DB/JWT secrets and Alertmanager's Slack webhook) |
+| `alerts` | this repo · `platform/alerts` | cluster-wide `PrometheusRule` (see "Alerting" below) |
 
 **`network-policies`**: three manifests, all scoped to the `recipes` namespace and targeting real, live-tested traffic paths rather than a blanket deny-all:
 
@@ -78,6 +80,18 @@ Three dashboards, one per failure domain - not one dashboard covering everything
 
 Deliberately not a fourth "business metrics" dashboard (recipe-creation rate, active users, ...) - `POST /recipes/create` rate on the app dashboard already gives a crude proxy, and three focused ops dashboards make a stronger case than four where one is decorative.
 
+## Autoscaling
+
+`recipes-api`'s Deployment deliberately has no `replicas` field - a `HorizontalPodAutoscaler` owns it (`minReplicas: 2`, `maxReplicas: 4`, targeting 70% CPU/memory utilization, backed by `metrics-server`). `minReplicas` is 2, not 1: the whole point is removing the single-point-of-failure a fixed `replicas: 1` was, so idling back down to 1 at low load would quietly undo that. Leaving `replicas` in the template at all would make Argo CD's `selfHeal` fight the HPA - every scale-up would get reset back down on the next sync, since Argo CD would see it as drift from the git-defined value.
+
+## Alerting
+
+`platform/alerts/recipes-alerts.yaml` (one `PrometheusRule`, synced by the `alerts` Application) - routed through Alertmanager to Slack via `platform/external-secrets/alertmanager-slack-webhook.yaml` (a separate AWS secret from CI's `SLACK_WEBHOOK_URL`, even though the value may be the same one - see `recipes-aws-infra`'s cluster-roles module for why). Four rules, deliberately not pod-level CPU/memory:
+
+- `NodeCPUHigh` / `NodeMemoryHigh` - node-level, not pod-level. `recipes-api`'s own HPA already targets 70% CPU/memory and scales out before a pod-level 80% would ever sustain - alerting on that too would just re-announce something already being handled automatically. Node headroom has no automatic mitigation at all (fixed 2-node group, no cluster autoscaler), which is what makes it actually actionable.
+- `RecipesApiHPAAtMax` - fires when the HPA has been pinned at `maxReplicas` for 10m+: autoscaling has run out of room to help, a human needs to raise the ceiling or investigate.
+- `RecipesApiErrorRateWarning` / `RecipesApiErrorRateCritical` - two-tier (2% / 10%) 5xx ratio, `for: 5m`. The load generator's deliberate error-path traffic is all 4xx (401/403/404/409/429), not 5xx, so baseline should sit near 0% - a two-tier threshold catches a real regression early without paging on noise.
+
 ## Adding a new component
 
 - **It's a third-party thing with its own Helm chart** (an operator, an ingress controller, …) → add an Application under `argocd/applications/platform/` (or wherever fits) with `source.repoURL`/`chart`/`targetRevision` pointing at the upstream chart, values inlined under `source.helm.values`.
@@ -86,10 +100,12 @@ Deliberately not a fourth "business metrics" dashboard (recipe-creation rate, ac
 ## Core technologies
 
 - **Infra:** AWS EKS via Terraform, using EKS Access Entries (`API` auth mode) for RBAC.
-- **CI/CD:** GitHub Actions with OIDC federation — no long-lived AWS credentials.
-- **Delivery:** Argo CD, App of Apps pattern.
+- **CI:** GitHub Actions, but only `pr-validation.yaml` - yamllint, `helm lint`/`template`, `kubeconform` against real CRD schemas, and `promtool check rules`. No AWS/cluster credentials anywhere in it: this repo never deploys itself, so it has nothing to authenticate to. (OIDC federation for actual AWS deploys belongs to `recipes-aws-infra` and `recipes`, not here.)
+- **Delivery:** Argo CD, App of Apps pattern - the only thing that ever deploys this repo, triggered by a merge to `main` itself.
 - **Secrets:** External Secrets Operator, bridging AWS Secrets Manager into native Kubernetes Secrets.
 - **Observability:** Prometheus + Grafana + Loki + Fluent Bit.
 - **Data:** CloudNativePG-managed PostgreSQL.
 - **Ingress:** NGINX Ingress + cert-manager (Let's Encrypt via Route53 DNS-01, IRSA-authenticated - see recipes-aws-infra's readme.md for the migration off GoDaddy).
 - **Network policy:** default-deny `NetworkPolicy`s scoping `recipes` namespace traffic to real, named paths (app ↔ Postgres, ingress/Prometheus ↔ app) - see the `network-policies` entry below.
+- **Autoscaling:** HPA on `recipes-api` (CPU/memory, `metrics-server`) - see "Autoscaling" below.
+- **Alerting:** Prometheus `PrometheusRule` → Alertmanager → Slack - see "Alerting" below.
