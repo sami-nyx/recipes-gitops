@@ -19,7 +19,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
 │   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit
 │   ├── platform/             # Cert-manager, cert-issuer, NGINX Ingress, CloudNativePG, storage
-│   ├── security/             # RBAC, NetworkPolicies, External Secrets
+│   ├── security/             # NetworkPolicies, External Secrets
 │   └── workloads/            # Postgres cluster, recipes-api
 ├── bootstrap/                # One-time cluster bootstrap (script + root Application)
 ├── platform/                 # Raw manifests referenced by argocd/applications/{platform,security,workloads}
@@ -38,7 +38,6 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 | `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
 | `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
-| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` (leftover from the GoDaddy webhook cert-manager replaced - grants access to an API group that no longer exists; harmless, but pending removal) |
 | `secrets` | this repo · `platform/external-secrets` | `recipes` (`ExternalSecret`s) |
 
 **`network-policies`**: three manifests, all scoped to the `recipes` namespace and targeting real, live-tested traffic paths rather than a blanket deny-all:
