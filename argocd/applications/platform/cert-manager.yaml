@@ -25,9 +25,13 @@ spec:
         # IRSA for the Route53 DNS-01 solver (see
         # apps/cert-issuer/templates/cluster-issuer.yaml) - replaces the
         # GoDaddy webhook's API-key secret entirely.
-        # REPLACE_ME: the cert_manager_route53_role_arn output from the
-        # recipes-aws-infra Terraform apply - same as the zone ID next to
-        # it, ArgoCD applies this file as-is and can't fill this in.
+        # Kept in sync automatically by recipes-aws-infra's
+        # tf-apply-eks.yaml (sync-cert-issuer-config job) - it writes
+        # this value straight from its own Terraform output on every
+        # apply (the role ARN gets a new random IAM name_prefix suffix
+        # each time), the same way it keeps apps/cert-issuer/values.yaml
+        # current. Not sensitive data - see that file's own comment for
+        # why committing the real value here beats the alternatives.
         serviceAccount:
           annotations:
             eks.amazonaws.com/role-arn: REPLACE_ME_CERT_MANAGER_ROUTE53_ROLE_ARN
