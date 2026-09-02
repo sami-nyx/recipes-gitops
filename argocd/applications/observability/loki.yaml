@@ -36,7 +36,7 @@ spec:
           auth_enabled: false
           commonConfig:
             replication_factor: 1
-          
+
           # Schema Configuration for TSDB and S3
           schemaConfig:
             configs:
