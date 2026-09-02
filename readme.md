@@ -20,7 +20,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
 │   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit, Alerting
 │   ├── platform/             # Cert-manager, cert-issuer, NGINX Ingress, CloudNativePG, storage
-│   ├── security/             # RBAC, NetworkPolicies, External Secrets
+│   ├── security/             # NetworkPolicies, External Secrets
 │   └── workloads/            # Postgres cluster, recipes-api
 ├── bootstrap/                # One-time cluster bootstrap (script + root Application)
 ├── platform/                 # Raw manifests referenced by argocd/applications/{observability,platform,security,workloads}
@@ -40,7 +40,6 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 | `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
 | `cert-issuer` | this repo · `platform/cert-manager` | cluster-wide `ClusterIssuer` |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
-| `rbac` | this repo · `platform/rbac` | cluster-wide `ClusterRole` (leftover from the GoDaddy webhook cert-manager replaced - grants access to an API group that no longer exists; harmless, but pending removal) |
 | `secrets` | this repo · `platform/external-secrets` | `recipes` + `monitoring` (`ExternalSecret`s - the recipes-api DB/JWT secrets and Alertmanager's Slack webhook) |
 | `alerts` | this repo · `platform/alerts` | cluster-wide `PrometheusRule` (see "Alerting" below) |
 
