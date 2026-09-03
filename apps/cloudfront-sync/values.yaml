@@ -13,19 +13,17 @@
 # the IRSA role's IAM policy is scoped to, so a value here that doesn't
 # match the role's actual scope just fails at update-distribution time,
 # not silently against the wrong distribution.
-distributionId: ""
+distributionId: "E2PTOPETJKX70U"
 # ARN of the cloudfront-sync IRSA role (recipes-aws-infra's
 # cloudfront_sync_irsa_role Terraform module) - annotated onto this
 # chart's ServiceAccount so the Job can call CloudFront/ELB without
 # static credentials.
-roleArn: ""
-
+roleArn: "arn:aws:iam::889867978066:role/sami-recipes-app-cloudfront-sync-da27bafaaa52cc03bdf8e23b6a"
 # The origin's Id field inside the CloudFront distribution config - a
 # stable label, not itself a DNS value, so unlike distributionId/roleArn
 # it never changes and doesn't need to flow through Terraform. Must
 # match the real origin's Id in the CloudFront console/config exactly.
 originId: aca9ec3e33fee4f3fa50ff0ede9a39de-39cd4a0af55117a4.elb.ap-south-1.amazonaws.com
-
 # How the Job finds the current ingress-nginx ELB via the Resource
 # Groups Tagging API - AWS Load Balancer tags it with this key/value
 # automatically, so no hardcoded name/ARN pattern is needed even though
@@ -33,15 +31,12 @@ originId: aca9ec3e33fee4f3fa50ff0ede9a39de-39cd4a0af55117a4.elb.ap-south-1.amazo
 elb:
   tagKey: kubernetes.io/service-name
   tagValue: ingress-nginx/ingress-nginx-controller
-
 aws:
   region: ap-south-1
-
 image:
   repository: public.ecr.aws/aws-cli/aws-cli
   tag: "2.34.16"
   pullPolicy: IfNotPresent
-
 resources:
   requests:
     cpu: 50m
