@@ -5,23 +5,19 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-
   annotations:
     argocd.argoproj.io/sync-wave: "-20"
 spec:
   project: default
-
   source:
     repoURL: https://charts.jetstack.io
     chart: cert-manager
     targetRevision: 1.21.0
-
     helm:
       releaseName: cert-manager
       values: |
         crds:
           enabled: true
-
         # IRSA for the Route53 DNS-01 solver (see
         # apps/cert-issuer/templates/cluster-issuer.yaml) - replaces the
         # GoDaddy webhook's API-key secret entirely.
@@ -34,8 +30,7 @@ spec:
         # why committing the real value here beats the alternatives.
         serviceAccount:
           annotations:
-            eks.amazonaws.com/role-arn: REPLACE_ME_CERT_MANAGER_ROUTE53_ROLE_ARN
-
+            eks.amazonaws.com/role-arn: arn:aws:iam::889867978066:role/sami-recipes-app-cert-manager-route53-ac82e736a784bbfa7112f29b62
         # Off by default in the chart - without this, cert-manager
         # exposes metrics (port 9402) but nothing scrapes them.
         # `labels.release: prometheus` is required for the
@@ -47,16 +42,13 @@ spec:
             enabled: true
             labels:
               release: prometheus
-
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
-
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

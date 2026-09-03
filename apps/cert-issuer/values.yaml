@@ -13,11 +13,9 @@
 
 # ACME account email - Let's Encrypt sends expiry/account notices here.
 email: saminsx@gmail.com
-
 # AWS region the Route53 hosted zone lives in.
 region: ap-south-1
-
 # The hosted zone ID cert-manager's Route53 DNS-01 solver is scoped to.
 # Not known until the zone is created manually - see readme.md's
 # "DNS: GoDaddy → Route53" section.
-route53ZoneId: REPLACE_ME_ROUTE53_ZONE_ID
+route53ZoneId: Z00700216ES7TD79SWYD
