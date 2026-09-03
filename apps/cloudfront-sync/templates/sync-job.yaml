@@ -1,0 +1,146 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cloudfront-sync
+  labels:
+    app: cloudfront-sync
+  annotations:
+    # Runs after the ServiceAccount hook above (weight -5), before the
+    # chart's normal (non-hook) resources are applied. Re-runs on every
+    # Argo CD sync, not just the first one - deleted and recreated each
+    # time via hook-delete-policy, same as recipes-api's db-init Job -
+    # which is the whole point: the ingress-nginx ELB gets a brand new
+    # DNS name every apply/destroy cycle, so CloudFront's origin has to
+    # be re-checked every sync, not just once at chart install time.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+spec:
+  backoffLimit: 2
+
+  template:
+    metadata:
+      labels:
+        app: cloudfront-sync
+
+    spec:
+      restartPolicy: Never
+      serviceAccountName: cloudfront-sync
+
+      containers:
+        - name: cloudfront-sync
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          env:
+            - name: AWS_REGION
+              value: {{ .Values.aws.region | quote }}
+            - name: DISTRIBUTION_ID
+              value: {{ required "distributionId is required - synced automatically by recipes-aws-infra's tf-apply-eks.yaml, see values.yaml" .Values.distributionId | quote }}
+            - name: ORIGIN_ID
+              value: {{ .Values.originId | quote }}
+            - name: TAG_KEY
+              value: {{ .Values.elb.tagKey | quote }}
+            - name: TAG_VALUE
+              value: {{ .Values.elb.tagValue | quote }}
+
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+
+              # ------------------------------------------------------------
+              # Preflight - fail fast with a clear message instead of a
+              # confusing error mid-script if either tool is ever missing
+              # from the image (same convention bootstrap.sh uses).
+              # ------------------------------------------------------------
+              for bin in aws jq; do
+                if ! command -v "$bin" >/dev/null 2>&1; then
+                  echo "Error: required tool '$bin' not found in image." >&2
+                  exit 1
+                fi
+              done
+
+              # ------------------------------------------------------------
+              # Find the current ingress-nginx ELB by tag, not by name -
+              # AWS assigns it a brand new name every time it's recreated.
+              # Retried: this Job can run before the Resource Groups
+              # Tagging API has finished indexing a just-created ELB's
+              # tags, even though Argo CD's own sync-wave ordering already
+              # keeps this Job from running before ingress-nginx itself.
+              # ------------------------------------------------------------
+              LB_ARN=""
+              for attempt in $(seq 1 10); do
+                LB_ARN=$(aws resourcegroupstaggingapi get-resources \
+                  --resource-type-filters elasticloadbalancing:loadbalancer \
+                  --tag-filters "Key=${TAG_KEY},Values=${TAG_VALUE}" \
+                  --query "ResourceTagMappingList[0].ResourceARN" \
+                  --output text 2>/dev/null || true)
+
+                if [ -n "$LB_ARN" ] && [ "$LB_ARN" != "None" ]; then
+                  break
+                fi
+
+                echo "Load balancer not found yet (attempt ${attempt}/10) - retrying in 15s..."
+                sleep 15
+              done
+
+              if [ -z "$LB_ARN" ] || [ "$LB_ARN" == "None" ]; then
+                echo "Error: could not find a load balancer tagged ${TAG_KEY}=${TAG_VALUE} after 10 attempts." >&2
+                exit 1
+              fi
+
+              echo "Found load balancer: ${LB_ARN}"
+
+              LB_DNS_NAME=$(aws elbv2 describe-load-balancers \
+                --load-balancer-arns "$LB_ARN" \
+                --query "LoadBalancers[0].DNSName" \
+                --output text)
+
+              if [ -z "$LB_DNS_NAME" ] || [ "$LB_DNS_NAME" == "None" ]; then
+                echo "Error: could not retrieve a DNS name for load balancer ${LB_ARN}." >&2
+                exit 1
+              fi
+
+              echo "Load balancer DNS name: ${LB_DNS_NAME}"
+
+              # ------------------------------------------------------------
+              # Compare against CloudFront's current origin before writing
+              # anything - an unconditional update-distribution call would
+              # start a new CloudFront deployment (several minutes) on
+              # every single sync, even when nothing actually changed.
+              # ------------------------------------------------------------
+              CF_RESPONSE=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID")
+              ETAG=$(echo "$CF_RESPONSE" | jq -r '.ETag')
+              CONFIG_JSON=$(echo "$CF_RESPONSE" | jq '.DistributionConfig')
+
+              CURRENT_DNS=$(echo "$CONFIG_JSON" | jq -r --arg originId "$ORIGIN_ID" \
+                '.Origins.Items[] | select(.Id == $originId) | .DomainName')
+
+              if [ -z "$CURRENT_DNS" ]; then
+                echo "Error: no origin with Id ${ORIGIN_ID} found in distribution ${DISTRIBUTION_ID}'s config." >&2
+                exit 1
+              fi
+
+              if [ "$CURRENT_DNS" == "$LB_DNS_NAME" ]; then
+                echo "CloudFront origin ${ORIGIN_ID} already points at ${LB_DNS_NAME} - nothing to do."
+                exit 0
+              fi
+
+              echo "Updating CloudFront origin ${ORIGIN_ID}: ${CURRENT_DNS} -> ${LB_DNS_NAME}"
+
+              UPDATED_CONFIG=$(echo "$CONFIG_JSON" | jq --arg originId "$ORIGIN_ID" --arg dns "$LB_DNS_NAME" \
+                '.Origins.Items = [.Origins.Items[] | if .Id == $originId then .DomainName = $dns else . end]')
+
+              aws cloudfront update-distribution \
+                --id "$DISTRIBUTION_ID" \
+                --distribution-config "$UPDATED_CONFIG" \
+                --if-match "$ETAG" \
+                --output text --query 'Distribution.Status'
+
+              echo "CloudFront origin updated successfully."
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
