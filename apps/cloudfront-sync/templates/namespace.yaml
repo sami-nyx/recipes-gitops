@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudfront-sync
+  # Deliberately NOT a helm.sh/hook: Argo CD excludes hook resources from
+  # the "managed resources" list it diffs against live cluster state -
+  # if every resource in this chart were a hook (the original bug here),
+  # desired vs. live is empty vs. empty from the very first reconciliation,
+  # Argo CD marks the app Synced/Healthy without ever running a real sync
+  # operation, and PreSync hooks (and CreateNamespace=true, which only
+  # happens inside an actual sync) never fire at all. This Namespace is
+  # what gives Argo CD something real to diff against an empty cluster,
+  # which is what makes it perform a sync in the first place.
