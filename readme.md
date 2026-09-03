@@ -17,10 +17,11 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 ├── apps/                     # Local Helm charts owned by this repo
 │   ├── recipes-api/          # The Flask backend — Deployment, Service, Ingress, ConfigMap, DB-init Job, HPA
 │   ├── cert-issuer/           # The letsencrypt-prod ClusterIssuer - region/email/zone-id as real values, not baked into a raw manifest
+│   ├── cloudfront-sync/       # PreSync hook Job that points CloudFront's origin at the current ingress-nginx ELB
 │   └── grafana/               # Wraps the upstream grafana chart + our own dashboards/*.json
 ├── argocd/applications/      # One file = one Argo CD Application (see table below)
 │   ├── observability/        # Prometheus, Grafana, Loki, Fluent Bit, Alerting
-│   ├── platform/             # Cert-manager, cert-issuer, NGINX Ingress, CloudNativePG, storage
+│   ├── platform/             # Cert-manager, cert-issuer, cloudfront-sync, NGINX Ingress, CloudNativePG, storage
 │   ├── security/             # NetworkPolicies, External Secrets
 │   └── workloads/            # Postgres cluster, recipes-api
 ├── bootstrap/                # One-time cluster bootstrap (script + root Application)
@@ -40,6 +41,7 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 | `prometheus`, `loki`, `fluent-bit` | remote charts | `monitoring` / `logging` |
 | `cert-manager`, `nginx-ingress`, `cloud-native-pg` | remote charts | `platform` add-ons |
 | `cert-issuer` | this repo · `apps/cert-issuer` | cluster-wide `ClusterIssuer` |
+| `cloudfront-sync` | this repo · `apps/cloudfront-sync` | `cloudfront-sync` (PreSync hook Job, no long-running resources) |
 | `storage` | this repo · `platform/storage` | cluster-wide `StorageClass` |
 | `secrets` | this repo · `platform/external-secrets` | `recipes` + `monitoring` (`ExternalSecret`s - the recipes-api DB/JWT secrets and Alertmanager's Slack webhook) |
 | `alerts` | this repo · `platform/alerts` | cluster-wide `PrometheusRule` (see "Alerting" below) |
@@ -51,6 +53,8 @@ Declarative GitOps for the Recipes platform on AWS EKS: Terraform provisions the
 - `recipes-api-egress.yaml` — `recipes-api` can reach Postgres and DNS, nothing else.
 
 Requires the VPC CNI's `enableNetworkPolicy` addon config to be `true` (set in `recipes-aws-infra`'s Terraform) - without it these manifests apply cleanly but are never actually enforced.
+
+**`cloudfront-sync`**: `ingress-nginx-controller`'s `LoadBalancer` Service gets a brand new ELB - and therefore a brand new DNS name - every time `recipes-aws-infra` destroys and re-applies the cluster (its normal daily cost-saving cycle, not an edge case), and CloudFront's origin doesn't update itself to match. This Application is a single `Job`, run as a Helm `pre-install,pre-upgrade` hook (same pattern as `recipes-api`'s db-init Job) so it re-runs on every Argo CD sync rather than once at install time: it looks up the current ELB by tag (never by name, since the name itself changes), compares its DNS name against CloudFront's configured origin, and calls `cloudfront update-distribution` only if they differ. Authenticates via IRSA (`recipes-aws-infra`'s `cloudfront_sync_irsa_role` Terraform module), scoped to exactly one CloudFront distribution - no static AWS credentials. `distributionId` and the role ARN in `apps/cloudfront-sync/values.yaml` are kept in sync automatically by `recipes-aws-infra`'s `tf-apply-eks.yaml` (`sync-cloudfront-config` job), the same way `cert-issuer`'s values are.
 
 ## Grafana dashboards
 

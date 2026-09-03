@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        chart: [recipes-api, grafana]
+        chart: [recipes-api, grafana, cert-issuer, cloudfront-sync]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

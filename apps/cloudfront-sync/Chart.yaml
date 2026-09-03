@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cloudfront-sync
+description: PreSync hook Job that points CloudFront's origin at the current ingress-nginx ELB - own chart, not folded into recipes-api, since it's a distinct platform concern with its own namespace and IRSA role (see readme.md).
+type: application
+version: 0.1.0

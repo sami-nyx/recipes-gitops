@@ -1,0 +1,51 @@
+# distributionId and roleArn are kept in sync automatically by
+# recipes-aws-infra's tf-apply-eks.yaml (sync-cloudfront-config job) - it
+# writes both straight to this file on every terraform apply, sourced
+# from that repo's CLOUDFRONT_DISTRIBUTION_ID variable and its own
+# Terraform output for the IRSA role ARN. Same reasoning as
+# apps/cert-issuer/values.yaml: neither value is sensitive - they're
+# resource identifiers, not credentials - so committing them here and
+# letting Argo CD sync normally beats keeping them out of git. Editing
+# them by hand still works fine; they'll just get overwritten on the
+# next apply if they drift from recipes-aws-infra's variables.
+
+# The CloudFront distribution this Job is allowed to update - also what
+# the IRSA role's IAM policy is scoped to, so a value here that doesn't
+# match the role's actual scope just fails at update-distribution time,
+# not silently against the wrong distribution.
+distributionId: ""
+# ARN of the cloudfront-sync IRSA role (recipes-aws-infra's
+# cloudfront_sync_irsa_role Terraform module) - annotated onto this
+# chart's ServiceAccount so the Job can call CloudFront/ELB without
+# static credentials.
+roleArn: ""
+
+# The origin's Id field inside the CloudFront distribution config - a
+# stable label, not itself a DNS value, so unlike distributionId/roleArn
+# it never changes and doesn't need to flow through Terraform. Must
+# match the real origin's Id in the CloudFront console/config exactly.
+originId: aca9ec3e33fee4f3fa50ff0ede9a39de-39cd4a0af55117a4.elb.ap-south-1.amazonaws.com
+
+# How the Job finds the current ingress-nginx ELB via the Resource
+# Groups Tagging API - AWS Load Balancer tags it with this key/value
+# automatically, so no hardcoded name/ARN pattern is needed even though
+# the LB itself is recreated (with a brand new name) every apply cycle.
+elb:
+  tagKey: kubernetes.io/service-name
+  tagValue: ingress-nginx/ingress-nginx-controller
+
+aws:
+  region: ap-south-1
+
+image:
+  repository: public.ecr.aws/aws-cli/aws-cli
+  tag: "2.34.16"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

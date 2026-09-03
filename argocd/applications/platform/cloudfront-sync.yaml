@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: cloudfront-sync
+  namespace: argocd
+  annotations:
+    # After nginx-ingress (wave -20): the sync-job hook Job looks up that
+    # wave's ELB by tag, and Argo CD won't start this wave until
+    # nginx-ingress's own Application resource tree - including its
+    # LoadBalancer Service - reports Healthy, which for a LoadBalancer
+    # Service means it already has a DNS name. The Job also retries its
+    # own lookup independently (see apps/cloudfront-sync/templates/
+    # sync-job.yaml), so this ordering is a courtesy, not a hard
+    # dependency.
+    argocd.argoproj.io/sync-wave: "-10"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/sami-nyx/recipes-gitops.git
+    targetRevision: main
+    path: apps/cloudfront-sync
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudfront-sync
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
