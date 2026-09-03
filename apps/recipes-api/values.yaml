@@ -1,12 +1,3 @@
-postgres:
-  enabled: true
-  instances: 2
-  clusterName: "recipes-db"
-  storage:
-    size: 5Gi
-    storageClass: ""
-  databaseName: "recipes_db"
-  databaseUser: "recipes_app"
 recipesApi:
   name: recipes-api
   namespace: default
