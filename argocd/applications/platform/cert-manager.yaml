@@ -30,7 +30,7 @@ spec:
         # why committing the real value here beats the alternatives.
         serviceAccount:
           annotations:
-            eks.amazonaws.com/role-arn: arn:aws:iam::889867978066:role/sami-recipes-app-cert-manager-route53-ac82e736a784bbfa7112f29b62
+            eks.amazonaws.com/role-arn: arn:aws:iam::889867978066:role/sami-recipes-app-cert-manager-route53-5ca39278df80a366f1e8d4546b
         # Off by default in the chart - without this, cert-manager
         # exposes metrics (port 9402) but nothing scrapes them.
         # `labels.release: prometheus` is required for the
