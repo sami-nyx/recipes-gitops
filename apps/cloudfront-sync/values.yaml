@@ -18,7 +18,7 @@ distributionId: "E2PTOPETJKX70U"
 # cloudfront_sync_irsa_role Terraform module) - annotated onto this
 # chart's ServiceAccount so the Job can call CloudFront/ELB without
 # static credentials.
-roleArn: "arn:aws:iam::889867978066:role/sami-recipes-app-cloudfront-sync-88a3f2957629f2a9030073cba3"
+roleArn: "arn:aws:iam::889867978066:role/sami-recipes-app-cloudfront-sync-6abe51696fae7fbc14aafe73fa"
 # The origin's Id field inside the CloudFront distribution config - a
 # stable label, not itself a DNS value, so unlike distributionId/roleArn
 # it never changes and doesn't need to flow through Terraform. Must
